@@ -1,0 +1,67 @@
+2026-10-14 13:10:11,057 | INFO    | ============================================================
+2026-10-14 13:10:11,058 | INFO    | HOME CREDIT DEFAULT RISK - TRAINING
+2026-10-14 13:10:11,058 | INFO    | ============================================================
+2026-10-14 13:10:11,058 | INFO    | Reading app IDs (cols 0-2) ...
+2026-10-14 13:10:12,554 | INFO    | Sampled to 50000 rows.
+2026-10-14 13:10:12,559 | INFO    | App IDs: 50000 unique customers.
+2026-10-14 13:10:12,634 | INFO    | Reading application_train (filtering) ...
+2026-10-14 13:10:16,448 | INFO    | App loaded: 50000 rows.
+2026-10-14 13:10:16,448 | INFO    | Reading app IDs (cols 0-2) ...
+2026-10-14 13:10:17,409 | INFO    | Sampled to 50000 rows.
+2026-10-14 13:10:17,414 | INFO    | App IDs: 50000 unique customers.
+2026-10-14 13:10:17,472 | INFO    | Reading application_train (filtering) ...
+2026-10-14 13:10:20,938 | INFO    | App loaded: 50000 rows.
+2026-10-14 13:10:20,938 | INFO    | Reading bureau.csv (chunked) ...
+2026-10-14 13:10:24,338 | INFO    |   bureau.csv: 237076 rows after filter.
+2026-10-14 13:10:24,339 | INFO    | Reading previous_application.csv (chunked) ...
+2026-10-14 13:10:32,463 | INFO    |   previous_application.csv: 229715 rows after filter.
+2026-10-14 13:10:32,468 | INFO    | Reading installments_payments.csv (chunked) ...
+2026-10-14 13:10:46,591 | INFO    |   installments_payments.csv: 1881881 rows after filter.
+2026-10-14 13:10:46,591 | INFO    | Reading POS_CASH_balance.csv (chunked) ...
+2026-10-14 13:10:55,213 | INFO    |   POS_CASH_balance.csv: 1392087 rows after filter.
+2026-10-14 13:10:55,213 | INFO    | Reading credit_card_balance.csv (chunked) ...
+2026-10-14 13:11:06,817 | INFO    |   credit_card_balance.csv: 520583 rows after filter.
+2026-10-14 13:11:06,821 | INFO    | Cleaning application (50000 rows)...
+2026-10-14 13:11:06,905 | INFO    | Building application features...
+2026-10-14 13:11:07,074 | INFO    | Building bureau features (237076 bureau rows)...
+2026-10-14 13:11:07,419 | INFO    | Building previous_application features (229715 rows)...
+2026-10-14 13:11:08,198 | INFO    | Building installments features (1881881 rows)...
+2026-10-14 13:11:09,306 | INFO    | Building POS/CC features (pos=1392087, cc=520583)...
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 716, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 514, in main
+    feat = build_full_features(
+        data["app"],
+    ...<4 lines>...
+        cc=data["cc"],
+    )
+  File "C:\Dev\home-credit-default-risk\src\features.py", line 474, in build_full_features
+    extras.append(build_pos_cc_features(pos, cc if cc is not None else pos.iloc[:0]))
+                  ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Dev\home-credit-default-risk\src\features.py", line 376, in build_pos_cc_features
+    cc = cc.copy()
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\generic.py", line 6811, in copy
+    data = self._mgr.copy(deep=deep)
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\internals\managers.py", line 604, in copy
+    res._consolidate_inplace()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\internals\managers.py", line 1788, in _consolidate_inplace
+    self.blocks = _consolidate(self.blocks)
+                  ~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\internals\managers.py", line 2269, in _consolidate
+    merged_blocks, _ = _merge_blocks(
+                       ~~~~~~~~~~~~~^
+        list(group_blocks), dtype=dtype, can_consolidate=_can_consolidate
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\internals\managers.py", line 2294, in _merge_blocks
+    new_values = np.vstack([b.values for b in blocks])  # type: ignore[misc]
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\numpy\_core\shape_base.py", line 292, in vstack
+    return _nx.concatenate(arrs, 0, dtype=dtype, casting=casting)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+numpy._core._exceptions._ArrayMemoryError: Unable to allocate 59.6 MiB for an array with shape (15, 520583) and data type float64

@@ -1,0 +1,71 @@
+{
+  "model_name": "LightGBM_calibrated",
+  "model_type": "LightGBM + Isotonic Calibration",
+  "framework": "lightgbm + scikit-learn",
+  "version": "1.0",
+  "trained_on": "2026-10-18",
+  "dataset": {
+    "name": "Home Credit Default Risk (Kaggle)",
+    "n_samples_train": 5250,
+    "n_samples_test": 7500,
+    "n_features": 301,
+    "default_rate_test": 0.0804
+  },
+  "hyperparameters": {
+    "n_estimators": 205,
+    "num_leaves": 53,
+    "learning_rate": 0.04692376031091254
+  },
+  "calibration": {
+    "method": "IsotonicRegression",
+    "brier_pre": 0.0676730583634723,
+    "brier_post": 0.06784552351465427
+  },
+  "threshold": {
+    "value": 0.05,
+    "strategy": "F1-driven (recall >= 80%)"
+  },
+  "test_metrics": {
+    "auc": 0.7582084983713206,
+    "gini": 0.5164169967426413,
+    "ks": 0.37513606391703946,
+    "brier": 0.06784552351465427,
+    "pr_auc": 0.2282378619072164,
+    "test_f1": 0.22317596566523606,
+    "test_recall": 0.8623548922056384,
+    "test_precision": 0.12817352723687453,
+    "test_threshold": 0.05,
+    "best_threshold": 0.05
+  },
+  "scorecard": {
+    "base": 600.0,
+    "pdo": 20.0,
+    "odds_at_base": 50.0,
+    "factor": 28.85390081777927,
+    "offset": 712.8771237954945,
+    "formula": "score = offset - factor * ln(PD / (1 - PD))"
+  },
+  "risk_bands": {
+    "Thấp": [
+      760.0,
+      1000.0
+    ],
+    "Trung bình": [
+      640.0,
+      760.0
+    ],
+    "Cao": [
+      300.0,
+      640.0
+    ]
+  },
+  "artifacts": {
+    "model": "model.joblib",
+    "roc_curve": "roc_curve.png",
+    "pr_curve": "pr_curve.png",
+    "ks_plot": "ks_plot.png",
+    "calibration": "calibration_curve.png",
+    "shap_global": "shap_global.png",
+    "feature_importance": "feature_importance.png"
+  }
+}

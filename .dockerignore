@@ -1,0 +1,37 @@
+# Docker ignore - giam context, tang toc build.
+# Giai đoạn 1 sẽ tinh chỉnh lại khi can bang inference.
+
+# Khong copy du lieu
+data/
+
+# Khong copy notebook + tests
+notebooks/
+tests/
+
+# Khong copy source khong can cho inference
+src/download_data.py
+src/train.py
+src/evaluate.py
+
+# Python artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# IDE / git
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# Env
+.venv/
+venv/
+.env
+
+# Kaggle cache
+.cache/
+
+# Tep lon khong can thiet
+*.log
+*.tmp

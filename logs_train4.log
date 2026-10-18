@@ -1,0 +1,41 @@
+2026-10-14 11:56:47,183 | INFO    | ============================================================
+2026-10-14 11:56:47,183 | INFO    | HOME CREDIT DEFAULT RISK - TRAINING
+2026-10-14 11:56:47,183 | INFO    | ============================================================
+2026-10-14 11:56:47,184 | INFO    | Reading application_train.csv ...
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 685, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 482, in main
+    data = load_data()
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 109, in load_data
+    app = pd.read_csv(APP_TRAIN_CSV)
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\io\parsers\readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\io\parsers\readers.py", line 626, in _read
+    return parser.read(nrows)
+           ~~~~~~~~~~~^^^^^^^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\io\parsers\readers.py", line 1968, in read
+    df = DataFrame(
+        new_col_dict,
+    ...<2 lines>...
+        copy=not using_copy_on_write(),
+    )
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\frame.py", line 778, in __init__
+    mgr = dict_to_mgr(data, index, columns, dtype=dtype, copy=copy, typ=manager)
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\internals\construction.py", line 503, in dict_to_mgr
+    return arrays_to_mgr(arrays, columns, index, dtype=dtype, typ=typ, consolidate=copy)
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\internals\construction.py", line 152, in arrays_to_mgr
+    return create_block_manager_from_column_arrays(
+        arrays, axes, consolidate=consolidate, refs=refs
+    )
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\internals\managers.py", line 2139, in create_block_manager_from_column_arrays
+    blocks = _form_blocks(arrays, consolidate, refs)
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\internals\managers.py", line 2212, in _form_blocks
+    values, placement = _stack_arrays(list(tup_block), dtype)
+                        ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\internals\managers.py", line 2252, in _stack_arrays
+    stacked = np.empty(shape, dtype=dtype)
+numpy._core._exceptions._ArrayMemoryError: Unable to allocate 16.4 MiB for an array with shape (7, 307511) and data type int64

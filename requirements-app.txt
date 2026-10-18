@@ -1,0 +1,20 @@
+# Subset for the inference Docker image.
+# KHÔNG chứa: lightgbm (đã pickle sẵn trong joblib, không cần import khi
+# load model.joblib trừ khi muốn SHAP TreeExplainer — xem note dưới),
+# kagglehub, matplotlib, seaborn, pytest.
+
+# Lưu ý về SHAP: TreeExplainer cho LightGBM cần lightgbm đã import. Nếu
+# build image theo file này, app vẫn chạy được, nhưng SHAP force plot sẽ
+# lỗi. Hai lựa chọn:
+#   (a) thêm lightgbm==4.3.0 ở đây (image nặng thêm ~30 MB)
+#   (b) fallback sang KernelExplainer / LinearExplainer (chậm hơn)
+# Đồ án mini, chọn (a) cho đơn giản.
+
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.1
+lightgbm==4.3.0
+shap==0.45.1
+joblib==1.4.2
+streamlit==1.37.0
+pydantic==2.8.2

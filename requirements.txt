@@ -1,0 +1,28 @@
+# Pinned versions for reproducibility. Tested on Python 3.11.
+# Tách inference (requirements-app.txt) để Docker image gọn nhẹ.
+
+# Core
+numpy==1.26.4
+pandas==2.2.2
+scipy==1.13.0
+
+# Modeling
+scikit-learn==1.5.1
+lightgbm==4.3.0
+shap==0.45.1
+joblib==1.4.2
+
+# Visualization
+matplotlib==3.9.0
+seaborn==0.13.2
+
+# App & validation
+streamlit==1.37.0
+pydantic==2.8.2
+
+# Data acquisition
+kagglehub==0.2.9
+
+# Testing
+pytest==8.3.2
+pytest-cov==5.0.0

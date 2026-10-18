@@ -1,0 +1,76 @@
+2026-10-14 13:35:50,894 | INFO    | ============================================================
+2026-10-14 13:35:50,894 | INFO    | HOME CREDIT DEFAULT RISK - TRAINING
+2026-10-14 13:35:50,894 | INFO    | ============================================================
+2026-10-14 13:35:50,894 | INFO    | Reading app IDs (cols 0-2) ...
+2026-10-14 13:35:51,792 | INFO    | Sampled to 50000 rows.
+2026-10-14 13:35:51,795 | INFO    | App IDs: 50000 unique customers.
+2026-10-14 13:35:51,851 | INFO    | Reading application_train (filtering) ...
+2026-10-14 13:35:54,647 | INFO    | App loaded: 50000 rows.
+2026-10-14 13:35:54,647 | INFO    | Reading app IDs (cols 0-2) ...
+2026-10-14 13:35:55,454 | INFO    | Sampled to 50000 rows.
+2026-10-14 13:35:55,458 | INFO    | App IDs: 50000 unique customers.
+2026-10-14 13:35:55,514 | INFO    | Reading application_train (filtering) ...
+2026-10-14 13:35:58,566 | INFO    | App loaded: 50000 rows.
+2026-10-14 13:35:58,566 | INFO    | Reading bureau.csv (chunked) ...
+2026-10-14 13:36:01,149 | INFO    |   bureau.csv: 237076 rows after filter.
+2026-10-14 13:36:01,149 | INFO    | Reading previous_application.csv (chunked) ...
+2026-10-14 13:36:07,622 | INFO    |   previous_application.csv: 229715 rows after filter.
+2026-10-14 13:36:07,625 | INFO    | Reading installments_payments.csv (chunked) ...
+2026-10-14 13:36:20,110 | INFO    |   installments_payments.csv: 1881881 rows after filter.
+2026-10-14 13:36:20,111 | INFO    | Reading POS_CASH_balance.csv (chunked) ...
+2026-10-14 13:36:27,047 | INFO    |   POS_CASH_balance.csv: 1392087 rows after filter.
+2026-10-14 13:36:27,048 | INFO    | Reading credit_card_balance.csv (chunked) ...
+2026-10-14 13:36:34,068 | INFO    |   credit_card_balance.csv: 520583 rows after filter.
+2026-10-14 13:36:34,074 | INFO    | Cleaning application (50000 rows)...
+2026-10-14 13:36:34,171 | INFO    | Building application features...
+2026-10-14 13:36:34,470 | INFO    | Building bureau features (237076 bureau rows)...
+2026-10-14 13:36:35,018 | INFO    | Building previous_application features (229715 rows)...
+2026-10-14 13:36:35,589 | INFO    | Building installments features (1881881 rows)...
+2026-10-14 13:36:36,662 | INFO    | Building POS/CC features (pos=1392087, cc=520583)...
+2026-10-14 13:36:37,172 | INFO    | Merging application + bureau + 3 extras...
+2026-10-14 13:36:37,930 | INFO    | Final feature matrix: (50000, 255)
+2026-10-14 13:36:38,306 | INFO    | Split: train=35000 (70.00%), valid=7500 (15.00%), test=7500 (15.00%)
+2026-10-14 13:36:38,306 | INFO    |   train default rate: 0.0805
+2026-10-14 13:36:38,307 | INFO    |   valid default rate: 0.0805
+2026-10-14 13:36:38,307 | INFO    |   test default rate: 0.0804
+2026-10-14 13:36:38,324 | INFO    | Numeric cols: 237, categorical cols: 16
+2026-10-14 13:36:38,324 | INFO    | Training Logistic (class_weight=None) ...
+2026-10-14 13:36:53,599 | INFO    | Logistic class_weight=None | valid AUC=0.7607, KS=0.4019, Brier=0.0680 | 15.3s
+2026-10-14 13:36:53,599 | INFO    | Training Logistic (class_weight=balanced) ...
+2026-10-14 13:37:20,657 | INFO    | Logistic class_weight=balanced | valid AUC=0.7604, KS=0.4057, Brier=0.1924 | 27.1s
+2026-10-14 13:37:20,657 | INFO    | ============================================================
+2026-10-14 13:37:20,658 | INFO    | OPTUNA TUNING cho LightGBM (50 trials, ~10 ph├║t)
+2026-10-14 13:37:20,658 | INFO    | ============================================================
+2026-10-14 13:37:22,083 | INFO    | Xt_tr shape=(35000, 375), Xt_va shape=(7500, 375), dtype=float32
+2026-10-14 13:38:18,777 | INFO    | Optuna done: best AUC=0.7707, params={'learning_rate': 0.032720225919695436, 'num_leaves': 24, 'max_depth': 4, 'min_child_samples': 85, 'subsample': 0.7554709158757928, 'colsample_bytree': 0.6356745158869479, 'reg_alpha': 1.1627201204016835, 'reg_lambda': 0.020874681332882276}
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+2026-10-14 13:38:21,321 | INFO    | LightGBM tuned | valid AUC=0.7700, KS=0.4061, Brier=0.0672 | best_iter=335
+2026-10-14 13:38:21,321 | INFO    | Best tr├¬n valid (AUC): LightGBM (AUC=0.7700)
+2026-10-14 13:38:21,362 | INFO    | Re-fitting LightGBM tr├¬n train+valid vß╗¢i 368 v├▓ng ...
+2026-10-14 13:38:24,859 | INFO    | ============================================================
+2026-10-14 13:38:24,859 | INFO    | THRESHOLD TUNING (F1-driven, min_recall=0.80)
+2026-10-14 13:38:24,859 | INFO    | ============================================================
+2026-10-14 13:38:25,478 | INFO    | Best threshold=0.050: F1=0.2319, Recall=0.8311, Precision=0.1348
+2026-10-14 13:38:25,478 | INFO    | Best threshold tr├¬n valid: thr=0.050 | F1=0.2319, Recall=0.8311, Precision=0.1348
+2026-10-14 13:38:25,594 | INFO    | Pre-calibration valid: Brier=0.0593, ECE=0.0197
+2026-10-14 13:38:25,594 | INFO    | Calibration ─æß║ít chuß║⌐n (Brier<0.08, ECE<0.05) - bß╗Å qua.
+2026-10-14 13:38:25,594 | INFO    | Final pipeline: LightGBM, calibration: none
+2026-10-14 13:38:26,114 | INFO    | Saved model -> C:\Dev\home-credit-default-risk\model\model.joblib (threshold=0.050)
+2026-10-14 13:38:26,115 | INFO    | Saved defaults -> C:\Dev\home-credit-default-risk\model\defaults.json
+2026-10-14 13:38:26,117 | INFO    | Saved metrics -> C:\Dev\home-credit-default-risk\model\metrics.json
+2026-10-14 13:38:26,676 | INFO    | Saved ROC -> C:\Dev\home-credit-default-risk\model\roc_curve.png
+2026-10-14 13:38:26,799 | INFO    | Saved calibration -> C:\Dev\home-credit-default-risk\model\calibration_curve.png
+2026-10-14 13:38:26,934 | INFO    | Saved KS -> C:\Dev\home-credit-default-risk\model\ks_plot.png
+2026-10-14 13:38:27,040 | INFO    | Saved PR -> C:\Dev\home-credit-default-risk\model\pr_curve.png
+
+============================================================
+METRICS TR├èN TEST
+============================================================
+                        auc    gini      ks   brier  pr_auc     ece  base_rate                   note  test_threshold  test_f1  test_recall  test_precision  best_iter                                                                                                                                                                                                                                   best_lgb_params calibration                                                                                                                                                                                         valid_pre_calibration  valid_post_calibration
+model                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+Logistic             0.7568  0.5136  0.3891  0.0675  0.2491  0.0090     0.0804      class_weight=None            0.05   0.2372       0.8143          0.1388        NaN                                                                                                                                                                                                                                               NaN         NaN                                                                                                                                                                                                           NaN                     NaN
+Logistic_balanced    0.7523  0.5046  0.3831  0.1887  0.2395  0.3064     0.0804  class_weight=balanced            0.05   0.1518       0.9967          0.0822        NaN                                                                                                                                                                                                                                               NaN         NaN                                                                                                                                                                                                           NaN                     NaN
+LightGBM             0.7686  0.5372  0.4194  0.0669  0.2558  0.0041     0.0804           optuna_tuned            0.05   0.2353       0.8192          0.1374      335.0  {'learning_rate': 0.032720225919695436, 'num_leaves': 24, 'max_depth': 4, 'min_child_samples': 85, 'subsample': 0.7554709158757928, 'colsample_bytree': 0.6356745158869479, 'reg_alpha': 1.1627201204016835, 'reg_lambda': 0.020874681332882276}         NaN                                                                                                                                                                                                           NaN                     NaN
+LightGBM_calibrated  0.7685  0.5370  0.4120  0.0670  0.2554  0.0061     0.0804                    NaN            0.05   0.2344       0.8176          0.1368        NaN                                                                                                                                                                                                                                               NaN        none  {'auc': 0.8583279874310474, 'gini': 0.7166559748620949, 'ks': 0.5475167483597363, 'brier': 0.05929610310493057, 'pr_auc': 0.4343658694844303, 'ece': 0.019720138484694196, 'base_rate': 0.08053333333333333}                     NaN
+2026-10-14 13:38:27,047 | INFO    | Tß╗òng thß╗¥i gian: 156.2s

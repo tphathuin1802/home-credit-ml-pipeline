@@ -1,0 +1,267 @@
+2026-10-14 12:28:48,711 | INFO    | ============================================================
+2026-10-14 12:28:48,711 | INFO    | HOME CREDIT DEFAULT RISK - TRAINING
+2026-10-14 12:28:48,711 | INFO    | ============================================================
+2026-10-14 12:28:48,711 | INFO    | Reading application_train.csv ...
+2026-10-14 12:28:52,235 | INFO    | Sampled to 100000 rows.
+2026-10-14 12:28:52,257 | INFO    | Reading app IDs (cols 0-2) ...
+2026-10-14 12:28:53,371 | INFO    | Sampled to 100000 rows.
+2026-10-14 12:28:53,384 | INFO    | App IDs: 100000 unique customers.
+2026-10-14 12:28:53,454 | INFO    | Reading application_train (filtering) ...
+2026-10-14 12:28:57,052 | INFO    | App loaded: 100000 rows.
+2026-10-14 12:28:57,052 | INFO    | Reading bureau.csv (chunked) ...
+2026-10-14 12:28:59,769 | INFO    |   bureau.csv: 475363 rows after filter.
+2026-10-14 12:28:59,779 | INFO    | Reading previous_application.csv (chunked) ...
+2026-10-14 12:29:06,841 | INFO    |   previous_application.csv: 459842 rows after filter.
+2026-10-14 12:29:06,877 | INFO    | Reading installments_payments.csv (chunked) ...
+2026-10-14 12:29:20,147 | INFO    |   installments_payments.csv: 3765483 rows after filter.
+2026-10-14 12:29:20,171 | INFO    | Reading POS_CASH_balance.csv (chunked) ...
+2026-10-14 12:29:28,272 | INFO    |   POS_CASH_balance.csv: 2781594 rows after filter.
+2026-10-14 12:29:28,303 | INFO    | Reading credit_card_balance.csv (chunked) ...
+2026-10-14 12:29:35,737 | INFO    |   credit_card_balance.csv: 1046227 rows after filter.
+2026-10-14 12:29:35,759 | INFO    | Cleaning application (100000 rows)...
+2026-10-14 12:29:35,884 | INFO    | Building application features...
+2026-10-14 12:29:36,175 | INFO    | Building bureau features (475363 bureau rows)...
+2026-10-14 12:29:36,737 | INFO    | Building previous_application features (459842 rows)...
+2026-10-14 12:29:37,516 | INFO    | Building installments features (3765483 rows)...
+2026-10-14 12:29:38,960 | INFO    | Building POS/CC features (pos=2781594, cc=1046227)...
+2026-10-14 12:29:39,947 | INFO    | Merging application + bureau + 3 extras...
+2026-10-14 12:29:41,119 | INFO    | Final feature matrix: (100000, 257)
+2026-10-14 12:29:41,789 | INFO    | Split: train=70000 (70.00%), valid=15000 (15.00%), test=15000 (15.00%)
+2026-10-14 12:29:41,789 | INFO    |   train default rate: 0.0801
+2026-10-14 12:29:41,790 | INFO    |   valid default rate: 0.0801
+2026-10-14 12:29:41,790 | INFO    |   test default rate: 0.0801
+2026-10-14 12:29:41,820 | INFO    | Numeric cols: 239, categorical cols: 16
+2026-10-14 12:29:41,821 | INFO    | Training Logistic (class_weight=None) ...
+2026-10-14 12:30:11,553 | INFO    | Logistic class_weight=None | valid AUC=0.7575, KS=0.3931, Brier=0.0674 | 29.7s
+2026-10-14 12:30:11,553 | INFO    | Training Logistic (class_weight=balanced) ...
+2026-10-14 12:31:35,637 | INFO    | Logistic class_weight=balanced | valid AUC=0.7574, KS=0.3905, Brier=0.1961 | 84.1s
+2026-10-14 12:31:35,637 | INFO    | ============================================================
+2026-10-14 12:31:35,637 | INFO    | OPTUNA TUNING cho LightGBM (50 trials, ~10 ph├║t)
+2026-10-14 12:31:35,637 | INFO    | ============================================================
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+[W 2026-10-14 12:40:24,325] Trial 28 failed with parameters: {'learning_rate': 0.028165503629467306, 'num_leaves': 31, 'max_depth': 6, 'min_child_samples': 49, 'subsample': 0.7135708232141414, 'colsample_bytree': 0.5370900198818422, 'reg_alpha': 1.4342878959282261, 'reg_lambda': 0.004233701664125788} because of the following error: LightGBMError('bad allocation').
+Traceback (most recent call last):
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\optuna\study\_optimize.py", line 206, in _run_trial
+    value_or_values = func(trial)
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 460, in objective
+    m.fit(
+    ~~~~~^
+        Xt_tr, y_tr,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        callbacks=[early_stopping(150, verbose=False), log_evaluation(0)],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py", line 1704, in fit
+    super().fit(
+    ~~~~~~~~~~~^
+        X,
+        ^^
+    ...<14 lines>...
+        init_model=init_model,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py", line 1171, in fit
+    self._Booster = train(
+                    ~~~~~^
+        params=params,
+        ^^^^^^^^^^^^^^
+    ...<6 lines>...
+        callbacks=callbacks,
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\engine.py", line 296, in train
+    booster = Booster(params=params, train_set=train_set)
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 3758, in __init__
+    train_set.construct()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 2574, in construct
+    self._lazy_init(
+    ~~~~~~~~~~~~~~~^
+        data=self.data,
+        ^^^^^^^^^^^^^^^
+    ...<9 lines>...
+        position=self.position,
+        ^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 2170, in _lazy_init
+    self.__init_from_np2d(mat=data, params_str=params_str, ref_dataset=ref_dataset)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 2300, in __init_from_np2d
+    _safe_call(
+    ~~~~~~~~~~^
+        _LIB.LGBM_DatasetCreateFromMat(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<8 lines>...
+        )
+        ^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 297, in _safe_call
+    raise LightGBMError(_LIB.LGBM_GetLastError().decode("utf-8"))
+lightgbm.basic.LightGBMError: bad allocation
+[W 2026-10-14 12:40:24,415] Trial 28 failed with value None.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 697, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 532, in main
+    best_lgb_params, best_lgb_auc = tune_lgbm(
+                                    ~~~~~~~~~^
+        Xt_tr, y_train, Xt_va, y_valid, n_trials=50, timeout_sec=600,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 474, in tune_lgbm
+    study.optimize(objective, n_trials=n_trials, timeout=timeout_sec, show_progress_bar=False)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\optuna\study\study.py", line 502, in optimize
+    _optimize(
+    ~~~~~~~~~^
+        study=self,
+        ^^^^^^^^^^^
+    ...<7 lines>...
+        show_progress_bar=show_progress_bar,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\optuna\study\_optimize.py", line 68, in _optimize
+    _optimize_sequential(
+    ~~~~~~~~~~~~~~~~~~~~^
+        study,
+        ^^^^^^
+    ...<8 lines>...
+        progress_bar=progress_bar,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\optuna\study\_optimize.py", line 165, in _optimize_sequential
+    frozen_trial_id = _run_trial(study, func, catch)
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\optuna\study\_optimize.py", line 263, in _run_trial
+    raise func_err
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\optuna\study\_optimize.py", line 206, in _run_trial
+    value_or_values = func(trial)
+  File "C:\Dev\home-credit-default-risk\src\train.py", line 460, in objective
+    m.fit(
+    ~~~~~^
+        Xt_tr, y_tr,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        callbacks=[early_stopping(150, verbose=False), log_evaluation(0)],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py", line 1704, in fit
+    super().fit(
+    ~~~~~~~~~~~^
+        X,
+        ^^
+    ...<14 lines>...
+        init_model=init_model,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py", line 1171, in fit
+    self._Booster = train(
+                    ~~~~~^
+        params=params,
+        ^^^^^^^^^^^^^^
+    ...<6 lines>...
+        callbacks=callbacks,
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\engine.py", line 296, in train
+    booster = Booster(params=params, train_set=train_set)
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 3758, in __init__
+    train_set.construct()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 2574, in construct
+    self._lazy_init(
+    ~~~~~~~~~~~~~~~^
+        data=self.data,
+        ^^^^^^^^^^^^^^^
+    ...<9 lines>...
+        position=self.position,
+        ^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 2170, in _lazy_init
+    self.__init_from_np2d(mat=data, params_str=params_str, ref_dataset=ref_dataset)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 2300, in __init_from_np2d
+    _safe_call(
+    ~~~~~~~~~~^
+        _LIB.LGBM_DatasetCreateFromMat(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<8 lines>...
+        )
+        ^
+    )
+    ^
+  File "C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\basic.py", line 297, in _safe_call
+    raise LightGBMError(_LIB.LGBM_GetLastError().decode("utf-8"))
+lightgbm.basic.LightGBMError: bad allocation

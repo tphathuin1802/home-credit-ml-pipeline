@@ -1,0 +1,84 @@
+2026-10-14 12:00:01,536 | INFO    | ============================================================
+2026-10-14 12:00:01,536 | INFO    | HOME CREDIT DEFAULT RISK - TRAINING
+2026-10-14 12:00:01,536 | INFO    | ============================================================
+2026-10-14 12:00:01,536 | INFO    | Reading application_train.csv ...
+2026-10-14 12:00:04,986 | INFO    | Sampled to 100000 rows.
+2026-10-14 12:00:04,996 | INFO    | Reading app IDs (cols 0-2) ...
+2026-10-14 12:00:06,107 | INFO    | Sampled to 100000 rows.
+2026-10-14 12:00:06,116 | INFO    | App IDs: 100000 unique customers.
+2026-10-14 12:00:06,163 | INFO    | Reading application_train (filtering) ...
+2026-10-14 12:00:09,465 | INFO    | App loaded: 100000 rows.
+2026-10-14 12:00:09,465 | INFO    | Reading bureau.csv (chunked) ...
+2026-10-14 12:00:12,338 | INFO    |   bureau.csv: 475363 rows after filter.
+2026-10-14 12:00:12,347 | INFO    | Reading previous_application.csv (chunked) ...
+2026-10-14 12:00:19,850 | INFO    |   previous_application.csv: 459842 rows after filter.
+2026-10-14 12:00:19,877 | INFO    | Reading installments_payments.csv (chunked) ...
+2026-10-14 12:00:33,349 | INFO    |   installments_payments.csv: 3765483 rows after filter.
+2026-10-14 12:00:33,369 | INFO    | Reading POS_CASH_balance.csv (chunked) ...
+2026-10-14 12:00:40,696 | INFO    |   POS_CASH_balance.csv: 2781594 rows after filter.
+2026-10-14 12:00:40,721 | INFO    | Reading credit_card_balance.csv (chunked) ...
+2026-10-14 12:00:48,046 | INFO    |   credit_card_balance.csv: 1046227 rows after filter.
+2026-10-14 12:00:48,068 | INFO    | Cleaning application (100000 rows)...
+2026-10-14 12:00:48,179 | INFO    | Building application features...
+2026-10-14 12:00:48,431 | INFO    | Building bureau features (475363 bureau rows)...
+2026-10-14 12:00:49,021 | INFO    | Building previous_application features (459842 rows)...
+2026-10-14 12:00:49,812 | INFO    | Building installments features (3765483 rows)...
+2026-10-14 12:00:51,501 | INFO    | Building POS/CC features (pos=2781594, cc=1046227)...
+2026-10-14 12:00:52,563 | INFO    | Merging application + bureau + 3 extras...
+2026-10-14 12:00:53,513 | INFO    | Final feature matrix: (100000, 257)
+2026-10-14 12:00:54,045 | INFO    | Split: train=70000 (70.00%), valid=15000 (15.00%), test=15000 (15.00%)
+2026-10-14 12:00:54,045 | INFO    |   train default rate: 0.0801
+2026-10-14 12:00:54,046 | INFO    |   valid default rate: 0.0801
+2026-10-14 12:00:54,046 | INFO    |   test default rate: 0.0801
+2026-10-14 12:00:54,070 | INFO    | Numeric cols: 239, categorical cols: 16
+2026-10-14 12:00:54,070 | INFO    | Training Logistic (class_weight=None) ...
+2026-10-14 12:01:22,089 | INFO    | Logistic class_weight=None | valid AUC=0.7576, KS=0.3929, Brier=0.0674 | 28.0s
+2026-10-14 12:01:22,089 | INFO    | Training Logistic (class_weight=balanced) ...
+2026-10-14 12:02:39,158 | INFO    | Logistic class_weight=balanced | valid AUC=0.7574, KS=0.3904, Brier=0.1962 | 77.1s
+2026-10-14 12:02:39,158 | INFO    | ============================================================
+2026-10-14 12:02:39,158 | INFO    | OPTUNA TUNING cho LightGBM (50 trials, ~10 ph├║t)
+2026-10-14 12:02:39,158 | INFO    | ============================================================
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\pipeline.py:61: FutureWarning: This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using other methods such as transform, predict, etc. This will raise an error in 1.8 instead of the current warning.
+  warnings.warn(
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\pipeline.py:61: FutureWarning: This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using other methods such as transform, predict, etc. This will raise an error in 1.8 instead of the current warning.
+  warnings.warn(
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)
+C:\Users\phath\AppData\Local\Programs\Python\Python313\Lib\site-packages\lightgbm\sklearn.py:1106: LGBMDeprecationWarning: The argument 'eval_set' is deprecated, use 'eval_X' and 'eval_y' instead.
+  eval_set = _validate_eval_set_Xy(eval_set=eval_set, eval_X=eval_X, eval_y=eval_y)

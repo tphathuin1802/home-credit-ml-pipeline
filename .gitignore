@@ -1,0 +1,48 @@
+# Byte-compiled / packaging
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Data - KHONG commit (file rat nang, co ban quyen)
+data/
+!data/.gitkeep
+!data/processed/.gitkeep
+
+# Notebooks - cache
+notebooks/.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Model artifacts (co the commit mot vai file de demo, nhung mac dinh ignore)
+model/*.joblib
+model/*.pkl
+model/*.png
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+
+# Kaggle cache
+.cache/
