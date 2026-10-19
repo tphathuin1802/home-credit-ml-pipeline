@@ -1,8 +1,8 @@
-"""Lazy loader cho application_train_sample.csv (5K rows, 2.7MB).
+"""Local-only loader cho application_train_sample.csv (5K rows, 2.7MB).
 
-Motivation: repo khong commit file CSV de giu repo nhe + tranh lo LFS.
-App (Streamlit Cloud) tu download file tu GitHub raw URL va cache local
-trong ``data/raw/`` de cac lan sau doc truc tiep tu disk.
+File duoc commit san trong repo (data/raw/application_train_sample.csv),
+nen chi can doc truc tiep tu disk. Khi deploy len Streamlit Cloud, file
+nay cung duoc pull theo git nen khong can download runtime.
 
 Public API:
     get_sample_csv_path()  -> Path
@@ -11,7 +11,6 @@ Public API:
 
 from __future__ import annotations
 
-import hashlib
 import logging
 from pathlib import Path
 
@@ -21,117 +20,22 @@ from src import config
 
 logger = logging.getLogger(__name__)
 
-# Multiple GitHub raw URL forms (in case one is blocked / deprecated).
-# Order matters: try the first, fall back to next on 404 / network error.
-GITHUB_RAW_URLS: tuple[str, ...] = (
-    # 1. media.githubusercontent.com (current default, fastest CDN)
-    "https://media.githubusercontent.com/media/"
-    "tphathuin1802/home-credit-ml-pipeline/refs/heads/main/"
-    "data/raw/application_train_sample.csv",
-    # 2. raw.githubusercontent.com (classic URL, still works for public repos)
-    "https://raw.githubusercontent.com/"
-    "tphathuin1802/home-credit-ml-pipeline/main/"
-    "data/raw/application_train_sample.csv",
-)
-
-# Primary URL constant (kept for backwards compat with old imports).
-GITHUB_RAW_URL: str = GITHUB_RAW_URLS[0]
-
-# Local cache file (se duoc tao khi user mo app tren cloud).
+# Local CSV (committed to git, present on every environment incl. Cloud).
 _LOCAL_PATH = config.DATA_RAW / "application_train_sample.csv"
 
-# MD5 cua file goc (verify download dung version).
-_EXPECTED_MD5: str | None = None  # None = skip check
 
+def get_sample_csv_path() -> Path:
+    """Tra ve Path toi sample CSV local.
 
-def _md5(path: Path, chunk: int = 1 << 20) -> str:
-    h = hashlib.md5()
-    with path.open("rb") as f:
-        for blk in iter(lambda: f.read(chunk), b""):
-            h.update(blk)
-    return h.hexdigest()
-
-
-def _download_from_github(url: str, dest: Path) -> None:
-    """Download CSV tu GitHub raw URL, hien thi tien trinh trong Streamlit."""
-    import urllib.error
-    import urllib.request
-
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".part")
-
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "home-credit-app/1.0 (+streamlit)"},
-    )
-    with urllib.request.urlopen(req, timeout=60) as r, tmp.open("wb") as f:
-        total = int(r.headers.get("Content-Length", 0))
-        downloaded = 0
-        chunk = 1 << 20  # 1 MB
-        while True:
-            buf = r.read(chunk)
-            if not buf:
-                break
-            f.write(buf)
-            downloaded += len(buf)
-            if total:
-                pct = downloaded * 100 // total
-                logger.debug("Download progress: %d%%", pct)
-
-    tmp.replace(dest)
-    size_mb = dest.stat().st_size / 1e6
-    logger.info("Downloaded %.2f MB to %s", size_mb, dest)
-
-
-def _download_with_fallback(urls: tuple[str, ...], dest: Path) -> None:
-    """Thu download theo thu tu cac URL; fail neu tat ca deu loi.
-
-    Raise FileNotFoundError neu khong URL nao thanh cong.
+    Raises:
+        FileNotFoundError: neu file khong ton tai tren disk.
     """
-    import urllib.error
-
-    last_err: Exception | None = None
-    for url in urls:
-        try:
-            _download_from_github(url, dest)
-            return
-        except (urllib.error.HTTPError, urllib.error.URLError, OSError) as e:
-            logger.warning("Download failed for %s: %s", url, e)
-            last_err = e
-            # Cleanup partial file
-            part = dest.with_suffix(dest.suffix + ".part")
-            if part.exists():
-                part.unlink()
-            continue
-
-    raise FileNotFoundError(
-        f"Khong the download sample CSV tu {len(urls)} GitHub URL(s). "
-        f"Last error: {last_err}. Tried:\n  - " + "\n  - ".join(urls)
-    )
-
-
-def get_sample_csv_path(*, force_download: bool = False) -> Path:
-    """Tra ve Path toi sample CSV, download tu GitHub neu chua co local.
-
-    Args:
-        force_download: bat buoc download lai (bo qua cache + checksum).
-
-    Returns:
-        Path toi file CSV. Raises FileNotFoundError neu download that bai.
-    """
-    if _LOCAL_PATH.exists() and not force_download:
-        if _EXPECTED_MD5 and _md5(_LOCAL_PATH) != _EXPECTED_MD5:
-            logger.warning("Local sample CSV has unexpected MD5, re-downloading")
-        else:
-            return _LOCAL_PATH
-
-    try:
-        _download_with_fallback(GITHUB_RAW_URLS, _LOCAL_PATH)
-    except FileNotFoundError:
-        # Cleanup partial file
-        if _LOCAL_PATH.with_suffix(".part").exists():
-            _LOCAL_PATH.with_suffix(".part").unlink()
-        raise
+    if not _LOCAL_PATH.exists():
+        raise FileNotFoundError(
+            f"Missing required file: {_LOCAL_PATH}. "
+            "Run `git checkout HEAD -- data/raw/application_train_sample.csv` "
+            "or re-clone the repo."
+        )
     return _LOCAL_PATH
 
 
@@ -142,15 +46,12 @@ def get_sample_df(nrows: int | None = None) -> pd.DataFrame:
         nrows: so dong doc (None = het file). Mac dinh None.
 
     Returns:
-        DataFrame. Raises FileNotFoundError neu khong co file va download fail.
+        DataFrame. Raises FileNotFoundError neu khong co file.
     """
-    path = get_sample_csv_path()
-    return pd.read_csv(path, nrows=nrows)
+    return pd.read_csv(get_sample_csv_path(), nrows=nrows)
 
 
 __all__ = [
-    "GITHUB_RAW_URL",
-    "GITHUB_RAW_URLS",
     "get_sample_csv_path",
     "get_sample_df",
 ]
