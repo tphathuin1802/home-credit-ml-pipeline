@@ -775,14 +775,25 @@ def page_eda():
             fig, ax = plt.subplots(figsize=(4.2, 2.4))
             data0 = df[df["TARGET"] == 0][sel].dropna()
             data1 = df[df["TARGET"] == 1][sel].dropna()
-            ax.boxplot([data0, data1], labels=["Non-default (0)", "Default (1)"],
-                       patch_artist=True,
-                       boxprops={"facecolor": "#FFFFFF", "edgecolor": "#0F0F0F"},
-                       medianprops={"color": "#ED1C24", "linewidth": 2},
-                       whiskerprops={"color": "#0F0F0F"},
-                       capprops={"color": "#0F0F0F"},
-                       flierprops={"markerfacecolor": "#ED1C24", "markeredgecolor": "#0F0F0F",
-                                   "markersize": 3, "alpha": 0.4})
+            # NOTE: matplotlib >=3.9 deprecates `labels=` in boxplot; use
+            # `tick_labels=` instead. Cloud runs matplotlib 3.14 which
+            # REMOVED the deprecated kwarg, so passing it raises TypeError.
+            boxplot_kwargs = dict(
+                patch_artist=True,
+                boxprops={"facecolor": "#FFFFFF", "edgecolor": "#0F0F0F"},
+                medianprops={"color": "#ED1C24", "linewidth": 2},
+                whiskerprops={"color": "#0F0F0F"},
+                capprops={"color": "#0F0F0F"},
+                flierprops={"markerfacecolor": "#ED1C24", "markeredgecolor": "#0F0F0F",
+                            "markersize": 3, "alpha": 0.4},
+            )
+            import matplotlib as mpl
+            if mpl.__version__ >= "3.9":
+                ax.boxplot([data0, data1], tick_labels=["Non-default (0)", "Default (1)"],
+                           **boxplot_kwargs)
+            else:
+                ax.boxplot([data0, data1], labels=["Non-default (0)", "Default (1)"],
+                           **boxplot_kwargs)
             ax.set_ylabel(sel)
             ax.set_title(f"Boxplot: {sel}")
             fig.tight_layout()
