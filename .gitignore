@@ -25,6 +25,9 @@ data/
 !data/.gitkeep
 !data/processed/.gitkeep
 
+# Power BI - giữ scripts + theme + docs + screenshots, không commit data
+powerbi/data/*.csv
+
 # Notebooks - cache
 notebooks/.ipynb_checkpoints/
 *.ipynb_checkpoints

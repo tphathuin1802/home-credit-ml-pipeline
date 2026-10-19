@@ -1,0 +1,243 @@
+"""
+==============================================================
+HOME CREDIT DEFAULT RISK - POWER BI DAX MEASURES
+==============================================================
+Copy/paste these into Power BI Desktop via:
+Home tab > Enter Data > Model view > New Measure
+
+Recommended model: LightGBM_calibrated
+Color: #ED1C24 (Home Credit Red)
+==============================================================
+"""
+
+# -------- 1. CORE KPIs --------
+
+Total_Customers = """
+Total Customers =
+COUNTROWS(fact_predictions)
+"""
+
+Default_Rate = """
+Default Rate (%) =
+DIVIDE(
+    CALCULATE(COUNTROWS(fact_predictions), fact_predictions[actual_default] = 1),
+    COUNTROWS(fact_predictions),
+    0
+) * 100
+"""
+
+Predicted_Default_Rate = """
+Predicted Default Rate (%) =
+DIVIDE(
+    CALCULATE(COUNTROWS(fact_predictions), fact_predictions[predicted_default] = 1),
+    COUNTROWS(fact_predictions),
+    0
+) * 100
+"""
+
+Avg_PD = """
+Average Probability of Default (%) =
+AVERAGE(fact_predictions[pd_calibrated]) * 100
+"""
+
+Avg_Score = """
+Average Credit Score =
+AVERAGE(fact_predictions[score])
+"""
+
+# -------- 2. MODEL PERFORMANCE --------
+
+AUC_Top = """
+Top Model AUC =
+MAXX(dim_models, dim_models[auc])
+"""
+
+Gini_Top = """
+Top Model Gini =
+MAXX(dim_models, dim_models[gini])
+"""
+
+KS_Top = """
+Top Model KS =
+MAXX(dim_models, dim_models[ks])
+"""
+
+Brier_Top = """
+Top Model Brier Score =
+MINX(dim_models, dim_models[brier])
+"""
+
+# -------- 3. CONFUSION MATRIX --------
+
+TP = """
+True Positives =
+CALCULATE(
+    COUNTROWS(fact_predictions),
+    fact_predictions[actual_default] = 1,
+    fact_predictions[predicted_default] = 1
+)
+"""
+
+FP = """
+False Positives =
+CALCULATE(
+    COUNTROWS(fact_predictions),
+    fact_predictions[actual_default] = 0,
+    fact_predictions[predicted_default] = 1
+)
+"""
+
+FN = """
+False Negatives =
+CALCULATE(
+    COUNTROWS(fact_predictions),
+    fact_predictions[actual_default] = 1,
+    fact_predictions[predicted_default] = 0
+)
+"""
+
+TN = """
+True Negatives =
+CALCULATE(
+    COUNTROWS(fact_predictions),
+    fact_predictions[actual_default] = 0,
+    fact_predictions[predicted_default] = 0
+)
+"""
+
+Precision = """
+Precision =
+DIVIDE([True Positives], [True Positives] + [False Positives], 0) * 100
+"""
+
+Recall = """
+Recall (Sensitivity) =
+DIVIDE([True Positives], [True Positives] + [False Negatives], 0) * 100
+"""
+
+F1 = """
+F1 Score =
+DIVIDE(
+    2 * [True Positives],
+    2 * [True Positives] + [False Positives] + [False Negatives],
+    0
+)
+"""
+
+Accuracy = """
+Accuracy =
+DIVIDE(
+    [True Positives] + [True Negatives],
+    [True Positives] + [True Negatives] + [False Positives] + [False Negatives],
+    0
+) * 100
+"""
+
+# -------- 4. RISK SEGMENTATION --------
+
+High_Risk_Count = """
+High Risk Customers =
+CALCULATE(
+    COUNTROWS(fact_predictions),
+    fact_predictions[risk_band] = "Cao"
+)
+"""
+
+Medium_Risk_Count = """
+Medium Risk Customers =
+CALCULATE(
+    COUNTROWS(fact_predictions),
+    fact_predictions[risk_band] = "Trung bình"
+)
+"""
+
+Low_Risk_Count = """
+Low Risk Customers =
+CALCULATE(
+    COUNTROWS(fact_predictions),
+    fact_predictions[risk_band] = "Thấp"
+)
+"""
+
+High_Risk_Rate = """
+High Risk Share (%) =
+DIVIDE([High Risk Customers], [Total Customers], 0) * 100
+"""
+
+Bad_Rate_by_Band = """
+Bad Rate by Risk Band =
+VAR _band = SELECTEDVALUE(fact_predictions[risk_band])
+RETURN
+    DIVIDE(
+        CALCULATE(COUNTROWS(fact_predictions), fact_predictions[risk_band] = _band, fact_predictions[actual_default] = 1),
+        CALCULATE(COUNTROWS(fact_predictions), fact_predictions[risk_band] = _band),
+        0
+    ) * 100
+"""
+
+# -------- 5. CREDIT SCORE BANDS --------
+
+Score_Bucket_Count = """
+Customers in Score Bucket =
+CALCULATE(
+    COUNTROWS(fact_predictions),
+    ALLEXCEPT(fact_predictions, fact_predictions[score], fact_predictions[pd_bucket])
+)
+"""
+
+# -------- 6. EXPECTED LOSS (LGD x EAD x PD) --------
+
+EL_Customer = """
+Expected Loss per Customer (proportional) =
+fact_predictions[pd_calibrated] * 1
+"""
+
+Total_Expected_Loss = """
+Total Expected Loss (proportional) =
+SUMX(fact_predictions, fact_predictions[pd_calibrated]) * 1
+"""
+
+EL_Rate = """
+Expected Loss Rate (%) =
+DIVIDE([Total Expected Loss (proportional)], [Total Customers], 0) * 100
+"""
+
+# -------- 7. DRILL-THROUGH GUARDS --------
+
+Selected_Customer = """
+Selected Customer =
+SELECTEDVALUE(fact_predictions[customer_id], BLANK())
+"""
+
+Selected_PD = """
+Selected PD =
+SELECTEDVALUE(fact_predictions[pd_calibrated], BLANK())
+"""
+
+Selected_Score = """
+Selected Score =
+SELECTEDVALUE(fact_predictions[score], BLANK())
+"""
+
+# -------- 8. CONDITIONAL FORMATTING (color) --------
+
+PD_Color = """
+PD Color =
+SWITCH(
+    TRUE(),
+    fact_predictions[pd_calibrated] >= 0.20, "#8B0000",  -- Dark red (very high risk)
+    fact_predictions[pd_calibrated] >= 0.10, "#ED1C24",  -- Home Credit red
+    fact_predictions[pd_calibrated] >= 0.05, "#F5A623",  -- Orange (medium)
+    "#3FAE5C"                                              -- Green (low)
+)
+"""
+
+Score_Color = """
+Score Color =
+SWITCH(
+    TRUE(),
+    fact_predictions[score] >= 760, "#3FAE5C",
+    fact_predictions[score] >= 640, "#F5A623",
+    "#ED1C24"
+)
+"""
