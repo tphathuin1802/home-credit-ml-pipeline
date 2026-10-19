@@ -200,9 +200,65 @@ def _load_model() -> dict[str, Any]:
         if "feature_columns" not in artifact:
             artifact["feature_columns"] = artifact.get("feature_names", [])
 
+    # ── Compatibility patch: sklearn 1.7 removed `SimpleImputer._fill_dtype`,
+    #    but pickles saved by older sklearn (<=1.5) still reference it on
+    #    .transform(). Walk every SimpleImputer in the loaded artifact and
+    #    ensure _fill_dtype exists. Without this, the next ct.transform()
+    #    on Cloud (sklearn 1.7+) raises:
+    #      AttributeError: 'SimpleImputer' object has no attribute '_fill_dtype'
+    _ensure_imputer_fill_dtype(artifact)
+
     _MODEL_CACHE["artifact"] = artifact
     logger.info("Model loaded: %s", path)
     return artifact
+
+
+def _ensure_imputer_fill_dtype(artifact: dict) -> None:
+    """Walk `ct` / `pipeline` and set _fill_dtype on every SimpleImputer.
+
+    Older sklearn (<=1.5) stored `self._fill_dtype = X.dtype` during fit.
+    sklearn 1.6+ no longer sets this attribute. Pickles saved by older
+    versions expect it on .transform(). For float inputs (numeric pipeline)
+    use np.float64; for object/string inputs (categorical pipeline) use
+    object. We detect by checking the imputer.statistics_ dtype if present,
+    else default to float64 (matches old behavior for numeric imputer).
+    """
+    try:
+        from sklearn.impute import SimpleImputer
+    except ImportError:
+        return
+
+    def _walk(obj):
+        # Pipeline -> iterate steps
+        if hasattr(obj, "steps") and isinstance(obj.steps, list):
+            for _, step in obj.steps:
+                yield step
+                yield from _walk(step)
+        # ColumnTransformer -> iterate transformers_
+        if hasattr(obj, "transformers_") and isinstance(obj.transformers_, list):
+            for _, trans, _ in obj.transformers_:
+                if trans is None:
+                    continue
+                yield trans
+                yield from _walk(trans)
+
+    for root_key in ("ct", "pipeline", "preprocessor"):
+        root = artifact.get(root_key)
+        if root is None:
+            continue
+        for step in _walk(root):
+            if not isinstance(step, SimpleImputer):
+                continue
+            if not hasattr(step, "_fill_dtype"):
+                # Reconstruct the attribute the old sklearn expected.
+                # Use statistics_ dtype if available, else float64.
+                try:
+                    dtype = step.statistics_.dtype  # type: ignore[attr-defined]
+                except Exception:
+                    dtype = None
+                if dtype is None or not hasattr(dtype, "kind"):
+                    dtype = np.dtype(np.float64)
+                step._fill_dtype = dtype
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
