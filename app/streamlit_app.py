@@ -1055,8 +1055,8 @@ def page_predict():
             # PD value
             ax.text(0.5, 0.30, f"{pct:.1f}%", ha="center", va="center",
                     fontsize=20, fontweight="bold", color=color)
-            ax.text(0.5, 0.13, "Probability of Default", ha="center", va="center",
-                    fontsize=8, color="#6B6B6B", letterspacing=2)
+            ax.text(0.5, 0.13, "PROBABILITY  OF  DEFAULT", ha="center", va="center",
+                    fontsize=8, color="#6B6B6B", fontweight="bold")
             ax.set_xlim(-0.1, 1.1)
             ax.set_ylim(-0.18, 0.65)
             ax.set_aspect("equal")
