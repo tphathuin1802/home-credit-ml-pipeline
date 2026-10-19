@@ -351,21 +351,20 @@ def get_model_info() -> dict[str, Any]:
 def get_default_customer() -> dict:
     """Trả dict khách hàng mẫu với RAW columns (chưa qua FE).
 
-    Lấy từ application_train.csv (5000 dòng đầu, chọn TARGET=0 + loại anomaly).
+    Lấy từ application_train_sample.csv (5000 dòng đầu, chọn TARGET=0 +
+    loại anomaly). File được lazy-load từ GitHub nếu chưa có local
+    (xem ``src.data_loader``).
+
     Dùng để fill form mặc định trong Streamlit. Sau khi user submit, FE sẽ
     được chạy trên dict này để có engineered features cho model.
 
     Trả về dict rỗng nếu không tìm thấy CSV.
     """
-    csv_path = config.APP_TRAIN_CSV
-    if not Path(csv_path).exists():
-        sample_p = config.PROJECT_ROOT / "data" / "sample" / "application_train_sample.csv"
-        if sample_p.exists():
-            csv_path = sample_p
-        else:
-            return {}
-
-    df = pd.read_csv(csv_path, nrows=5000)
+    try:
+        from src import data_loader
+        df = data_loader.get_sample_df(nrows=5000)
+    except FileNotFoundError:
+        return {}
     # Prefer a clean row: TARGET=0 + no DAYS_EMPLOYED anomaly
     clean = df[(df["TARGET"] == 0) & (df["DAYS_EMPLOYED"] != 365243)]
     if len(clean) == 0:

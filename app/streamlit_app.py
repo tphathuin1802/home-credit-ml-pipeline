@@ -28,7 +28,9 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 from src import config
+from src import data_loader
 from src import predict
+from src.data_loader import get_sample_df
 from src.predict import (
     get_default_customer,
     get_model_info,
@@ -350,9 +352,17 @@ def load_metrics() -> dict:
 
 @st.cache_data(show_spinner="Loading sample data...")
 def load_sample_app(n: int = 5000) -> pd.DataFrame:
-    if not config.APP_TRAIN_CSV.exists():
+    """Lazy-load application_train_sample.csv (5K rows, 2.7MB).
+
+    If the file isn't on disk (e.g. on Streamlit Cloud), it's downloaded
+    from the GitHub raw URL the first time and cached locally in
+    ``data/raw/``. See ``src.data_loader`` for the downloader.
+    """
+    try:
+        return get_sample_df(nrows=n)
+    except FileNotFoundError as e:
+        st.error(str(e))
         return pd.DataFrame()
-    return pd.read_csv(config.APP_TRAIN_CSV, nrows=n)
 
 
 @st.cache_data
@@ -936,28 +946,26 @@ def page_predict():
             "EXT_SOURCE_3": ext3,
         })
 
-        # Build engineered features for the user-modified record
+        # Build a 1-row DataFrame with the raw record + fill missing
+        # raw columns from defaults so the ColumnTransformer is happy.
         # (FE features like AGE_YEARS, EXT_SOURCE_MEAN, CREDIT_INCOME_RATIO,
-        # BUR_*_feat, etc. are required by the ColumnTransformer)
+        # BUR_*_feat are added inside build_features_for_one_row.)
         _row_df = pd.DataFrame([record])
-        # Some raw columns the user didn't touch may be missing — fetch them
-        # from defaults OR from a base CSV row so clean_application doesn't crash
         for col, val in defaults.items():
             if col not in _row_df.columns:
                 _row_df[col] = val
-        # Also fetch any remaining missing columns from the CSV (last resort)
+        # Fill any remaining columns (e.g. rare raw fields) with NaN
         try:
-            _csv_cols = pd.read_csv(config.APP_TRAIN_CSV, nrows=1).columns
+            _csv_cols = get_sample_df(nrows=1).columns
             for c in _csv_cols:
-                if c not in _row_df.columns and c not in ("TARGET",):
-                    # Use a sensible default (median for numeric, mode for object)
-                    if c not in _row_df.columns:
-                        _row_df[c] = np.nan
+                if c not in _row_df.columns and c != "TARGET":
+                    _row_df[c] = np.nan
         except Exception:
             pass
+
+        # Engineered features: AGE_YEARS, EXT_SOURCE_MEAN, CREDIT_INCOME_RATIO,
+        # BUR_*_feat, etc. — required by the trained ColumnTransformer.
         try:
-            # Build FE features + ensure all expected columns exist
-            # (needed for users without bureau/prev/inst/pos/cc data)
             _ct = artifact.get("ct") or artifact.get("preprocessor")
             _expected = list(_ct.feature_names_in_) if hasattr(_ct, "feature_names_in_") else None
             _fe_row = _features.build_features_for_one_row(_row_df, expected_cols=_expected)
@@ -965,23 +973,36 @@ def page_predict():
             st.warning(f"Feature engineering warning: {_fe_err}. Falling back to raw record.")
             _fe_row = _row_df
 
-        # Use predict_batch with a 1-row DataFrame. It correctly handles
-        # column reordering, NaN fills, and the ColumnTransformer schema.
-        # The function returns a DataFrame with pd, score, risk_band, etc.
+        # ── Predict using the SAME path as predict_batch, but read the
+        #    correct column names (PD, Score, RiskBand, Decision). ──
         _fe_row = _fe_row.reset_index(drop=True)
         _batch = predict.predict_batch(_fe_row)
         if len(_batch) == 0:
             raise RuntimeError("predict_batch returned empty result")
-        _r = _batch.iloc[0].to_dict()
+        _r = _batch.iloc[0]
         result = {
-            "pd":         float(_r.get("pd", _r.get("pd_calibrated", 0.0))),
-            "score":      float(_r.get("score", 600.0)),
-            "risk_band":  str(_r.get("risk_band", "Unknown")),
-            "decision":   str(_r.get("decision", "REJECT")),
-            "raw_prob":   float(_r.get("raw_prob", 0.0)),
+            "pd":         float(_r["PD"]),
+            "score":      float(_r["Score"]),
+            "risk_band":  str(_r["RiskBand"]),
+            "decision":   str(_r["Decision"]),
+            "raw_prob":   float(artifact.get("raw_prob", 0.0)),
             "threshold":  float(artifact.get("best_threshold", 0.05)),
             "model_name": str(artifact.get("model_name", "LightGBM_calibrated")),
         }
+        # Also get the raw prob (uncalibrated) for transparency
+        try:
+            _ct_local = artifact.get("ct")
+            _lgb_local = artifact.get("lgb")
+            if _ct_local is not None and _lgb_local is not None:
+                _missing = [c for c in _ct_local.feature_names_in_ if c not in _fe_row.columns]
+                if _missing:
+                    for c in _missing:
+                        _fe_row[c] = np.nan
+                _fe_row = _fe_row[list(_ct_local.feature_names_in_)]
+                _X_proc = _ct_local.transform(_fe_row)
+                result["raw_prob"] = float(_lgb_local.predict_proba(_X_proc)[:, 1][0])
+        except Exception:
+            pass
 
         with right:
             st.markdown("### Prediction Result")
@@ -992,12 +1013,18 @@ def page_predict():
             thr = info["threshold"]
 
             color_map = {
-                "Excellent": "#16A34A", "Good": "#5cb85c", "Medium": "#F59E0B",
-                "High": "#ED1C24", "Very High": "#7F1D1D",
+                "Excellent":  "#16A34A",  # green
+                "Good":       "#5CB85C",  # light green
+                "Fair":       "#F59E0B",  # amber
+                "Medium":     "#F59E0B",  # alias
+                "Poor":       "#ED1C24",  # red
+                "High":       "#ED1C24",  # alias
+                "Very Poor":  "#7F1D1D",  # dark red
+                "Very High":  "#7F1D1D",  # alias
             }
             color = color_map.get(band, "#6B6B6B")
-            pill_class = ("hc-pill-green" if pd_val < thr * 0.5
-                          else "hc-pill-amber" if pd_val < thr
+            pill_class = ("hc-pill-green" if band in ("Excellent", "Good")
+                          else "hc-pill-amber" if band in ("Fair", "Medium")
                           else "hc-pill-red")
 
             st.markdown(
@@ -1023,42 +1050,87 @@ def page_predict():
                 unsafe_allow_html=True,
             )
 
-            # Matplotlib gauge — semi-circle, with an arrow pointing to PD
-            fig, ax = plt.subplots(figsize=(3.2, 1.2))
-            pct = pd_val * 100
-            # Background arc (semi-circle from 180° to 0°)
-            ax.add_patch(plt.matplotlib.patches.Wedge(
-                (0.5, 0.0), 0.45, 0, 180,
-                width=0.10, facecolor="#F0F0F0", edgecolor="none",
-            ))
-            # Filled arc according to PD
-            ax.add_patch(plt.matplotlib.patches.Wedge(
-                (0.5, 0.0), 0.45, 180 - (pct / 100) * 180, 180,
-                width=0.10, facecolor=color, edgecolor="none",
-            ))
-            # Tick marks at 25/50/75%
-            for tick in (25, 50, 75):
-                ang = np.deg2rad(180 - (tick / 100) * 180)
+            # Matplotlib gauge — large semi-circle with 3-zone gradient
+            fig, ax = plt.subplots(figsize=(6.0, 3.6))
+            pct = min(max(pd_val * 100, 0.0), 100.0)
+
+            # ── 3-zone background (green / amber / red) ────────────────────
+            # Effective scale: 0-30% PD fills the entire arc (default rate ≈8%)
+            scale_max_pct = 30.0
+            scaled_pct = min(pct / scale_max_pct * 100, 100)
+
+            zone_boundaries = [
+                (0.0,  0.6,  "#16A34A"),  # 0-60%  → green  (low risk)
+                (0.6,  0.85, "#F59E0B"),  # 60-85% → amber  (medium)
+                (0.85, 1.0,  "#ED1C24"),  # 85-100%→ red    (high)
+            ]
+            for (lo, hi, c) in zone_boundaries:
+                if hi <= lo:
+                    continue
+                start_deg = 180 - lo * 180
+                end_deg   = 180 - hi * 180
+                ax.add_patch(plt.matplotlib.patches.Wedge(
+                    (0.5, 0.0), 0.45, end_deg, start_deg,
+                    width=0.09, facecolor=c, edgecolor="none", alpha=0.9,
+                ))
+
+            # ── Tick marks at 5/10/15/20/25/30% PD (on the arc) ─────────────
+            for tick in (5, 10, 15, 20, 25, 30):
+                t_pct = tick / scale_max_pct
+                ang = np.deg2rad(180 - t_pct * 180)
                 x0, y0 = 0.5 + 0.40 * np.cos(ang), 0.40 * np.sin(ang)
                 x1, y1 = 0.5 + 0.50 * np.cos(ang), 0.50 * np.sin(ang)
-                ax.plot([x0, x1], [y0, y1], color="#0F0F0F", lw=0.8)
-                lx, ly = 0.5 + 0.32 * np.cos(ang), 0.32 * np.sin(ang)
+                ax.plot([x0, x1], [y0, y1], color="#0F0F0F", lw=1.2)
+                # Tick label sits INSIDE the arc, near the inner edge
+                lx, ly = 0.5 + 0.30 * np.cos(ang), 0.30 * np.sin(ang)
                 ax.text(lx, ly, f"{tick}", ha="center", va="center",
-                        fontsize=7, color="#6B6B6B")
-            # Arrow pointing at PD (black triangle at the end of the filled arc)
-            arrow_ang = np.deg2rad(180 - (pct / 100) * 180)
-            ax_x, ax_y = 0.5 + 0.45 * np.cos(arrow_ang), 0.45 * np.sin(arrow_ang)
+                        fontsize=8, color="#0F0F0F", fontweight="bold")
+
+            # ── Threshold marker (small triangle + label OUTSIDE the arc) ───
+            thr_pct = thr * 100
+            if thr_pct <= scale_max_pct:
+                thr_ang = np.deg2rad(180 - (thr_pct / scale_max_pct) * 180)
+                tx = 0.5 + 0.55 * np.cos(thr_ang)
+                ty = 0.55 * np.sin(thr_ang)
+                ax.plot([tx], [ty], marker="v", markersize=9,
+                        color="#0F0F0F", markeredgecolor="#FFFFFF",
+                        markeredgewidth=1.2, zorder=8)
+                # Label box — pushes label slightly further out so it doesn't
+                # overlap with the arc. Place on the OUTSIDE of the marker.
+                label_ang = thr_ang
+                lx = 0.5 + 0.62 * np.cos(label_ang)
+                ly = 0.62 * np.sin(label_ang) + 0.02
+                ha = "left" if np.cos(label_ang) >= 0 else "right"
+                ax.text(lx, ly, f"τ={thr_pct:.1f}%",
+                        ha=ha, va="bottom", fontsize=8,
+                        color="#0F0F0F", fontweight="bold",
+                        bbox=dict(boxstyle="round,pad=0.25",
+                                  facecolor="#FFFFFF",
+                                  edgecolor="#0F0F0F", lw=0.6))
+
+            # ── Needle pointing at PD ──────────────────────────────────────
+            arrow_ang = np.deg2rad(180 - scaled_pct / 100 * 180)
+            ax_x = 0.5 + 0.45 * np.cos(arrow_ang)
+            ax_y = 0.45 * np.sin(arrow_ang)
             ax.annotate(
-                "", xy=(ax_x, ax_y), xytext=(0.5, -0.05),
-                arrowprops=dict(arrowstyle="->", color="#0F0F0F", lw=1.8),
+                "", xy=(ax_x, ax_y), xytext=(0.5, 0.0),
+                arrowprops=dict(arrowstyle="-|>", color="#0F0F0F", lw=2.4,
+                                mutation_scale=20),
             )
-            # PD value
-            ax.text(0.5, 0.30, f"{pct:.1f}%", ha="center", va="center",
-                    fontsize=20, fontweight="bold", color=color)
-            ax.text(0.5, 0.13, "PROBABILITY  OF  DEFAULT", ha="center", va="center",
+            # Needle hub
+            ax.add_patch(plt.Circle((0.5, 0.0), 0.03,
+                                    facecolor="#0F0F0F",
+                                    edgecolor="#FFFFFF", lw=1.4, zorder=10))
+
+            # ── Big PD value in the MOUTH of the gauge (below the arc) ─────
+            ax.text(0.5, -0.10, f"{pct:.2f}%", ha="center", va="center",
+                    fontsize=28, fontweight="bold", color=color)
+            ax.text(0.5, -0.20, "PROBABILITY  OF  DEFAULT",
+                    ha="center", va="center",
                     fontsize=8, color="#6B6B6B", fontweight="bold")
-            ax.set_xlim(-0.1, 1.1)
-            ax.set_ylim(-0.18, 0.65)
+
+            ax.set_xlim(-0.20, 1.20)
+            ax.set_ylim(-0.32, 0.70)
             ax.set_aspect("equal")
             ax.axis("off")
             st.pyplot(fig, use_container_width=True)
