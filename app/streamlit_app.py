@@ -778,6 +778,9 @@ def page_eda():
             # NOTE: matplotlib >=3.9 deprecates `labels=` in boxplot; use
             # `tick_labels=` instead. Cloud runs matplotlib 3.14 which
             # REMOVED the deprecated kwarg, so passing it raises TypeError.
+            #
+            # IMPORTANT: do NOT use string compare ('3.10.1' >= '3.9' is
+            # False because '1' < '9' lexicographically). Use tuple compare.
             boxplot_kwargs = dict(
                 patch_artist=True,
                 boxprops={"facecolor": "#FFFFFF", "edgecolor": "#0F0F0F"},
@@ -788,7 +791,8 @@ def page_eda():
                             "markersize": 3, "alpha": 0.4},
             )
             import matplotlib as mpl
-            if mpl.__version__ >= "3.9":
+            mpl_version = tuple(int(x) for x in mpl.__version__.split(".")[:2])
+            if mpl_version >= (3, 9):
                 ax.boxplot([data0, data1], tick_labels=["Non-default (0)", "Default (1)"],
                            **boxplot_kwargs)
             else:
