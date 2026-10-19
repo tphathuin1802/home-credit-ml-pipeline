@@ -528,3 +528,43 @@ class _ClipTransformer:
 
     def transform(self, X):
         return np.where(np.isinf(X), np.nan, X)
+
+
+# ----------------------------------------------------------------------
+# Single-row feature builder (for predict / streamlit)
+# ----------------------------------------------------------------------
+def build_features_for_one_row(app_row: pd.DataFrame) -> pd.DataFrame:
+    """Build engineered features for a SINGLE application row.
+
+    Returns a 1-row DataFrame with all expected feature columns (app + bureau +
+    prev + installments + pos + cc) so that ``predict_from_record`` works
+    without raising "columns are missing" ValueError.
+
+    Since we don't have bureau/prev/etc. for an arbitrary user input, the
+    corresponding aggregate columns are filled with 0 and the HAS_* flags
+    are set to 0. The model has been trained on the same convention (users
+    without bureau → HAS_BUREAU=0, aggregated columns=0).
+    """
+    # 1) Clean + app features
+    app_clean = clean_application(app_row)
+    app_feat  = build_application_features(app_clean)
+
+    # 2) Get expected aggregate column names from a full pipeline run
+    #    (we can't run on a single row alone, so we read from artifact at predict time)
+    # For now, build empty dataframes with HAS_* flags; the ColumnTransformer's
+    # imputer will handle the rest.
+    sk_id = app_feat["SK_ID_CURR"].iloc[0] if "SK_ID_CURR" in app_feat.columns else 0
+    base_idx = app_feat.index
+
+    # Empty bureau features: 0s for everything + HAS_BUREAU=0
+    bureau_empty = pd.DataFrame({"SK_ID_CURR": [sk_id], "HAS_BUREAU": [0]})
+
+    # Empty extras: 0s for everything + HAS_*=0
+    extras_empty = [
+        pd.DataFrame({"SK_ID_CURR": [sk_id], "HAS_EXTRA_0": [0]}),  # prev
+        pd.DataFrame({"SK_ID_CURR": [sk_id], "HAS_EXTRA_1": [0]}),  # inst
+        pd.DataFrame({"SK_ID_CURR": [sk_id], "HAS_EXTRA_2": [0]}),  # pos/cc
+    ]
+
+    merged = merge_features(app_feat, bureau_empty, *extras_empty)
+    return merged

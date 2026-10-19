@@ -80,11 +80,23 @@ def predict_from_record(record: dict, model_dict: dict) -> dict:
         lgb_b = model_dict["lgb"]
         iso_r = model_dict.get("iso_reg")
 
-        feature_columns = model_dict.get("feature_names", [])
+        # Use the ColumnTransformer's own feature_names_in_ (raw columns)
+        # NOT the transformed feature_names which are prefixed (cat__, num__)
+        if hasattr(ct, "feature_names_in_"):
+            expected_cols = list(ct.feature_names_in_)
+        else:
+            expected_cols = model_dict.get("feature_names", [])
+
         X_raw = pd.DataFrame([record])
-        for c in feature_columns:
-            if c not in X_raw.columns:
-                X_raw[c] = np.nan
+
+        # Build a single-row DataFrame with all expected columns; fill missing with NaN
+        missing = [c for c in expected_cols if c not in X_raw.columns]
+        if missing:
+            X_raw = pd.concat([X_raw, pd.DataFrame({c: [np.nan] for c in missing})], axis=1)
+
+        # Reorder to match ct.feature_names_in_ exactly
+        X_raw = X_raw[expected_cols]
+
         X_proc = ct.transform(X_raw)
         raw_prob = float(lgb_b.predict_proba(X_proc)[:, 1][0])
         pd_val = float(iso_r.predict([raw_prob])[0]) if iso_r is not None else raw_prob
@@ -257,32 +269,41 @@ def get_model_info() -> dict[str, Any]:
 
 
 def get_default_customer() -> dict:
-    """Trả dict khách hàng mẫu (median numeric, mode categorical).
+    """Trả dict khách hàng mẫu với RAW columns (chưa qua FE).
 
-    Lấy từ application_train.csv (sample 5000 dòng đầu).
-    Dùng để fill form mặc định trong Streamlit.
+    Lấy từ application_train.csv (5000 dòng đầu, chọn TARGET=0 + loại anomaly).
+    Dùng để fill form mặc định trong Streamlit. Sau khi user submit, FE sẽ
+    được chạy trên dict này để có engineered features cho model.
+
+    Trả về dict rỗng nếu không tìm thấy CSV.
     """
     csv_path = config.APP_TRAIN_CSV
     if not Path(csv_path).exists():
-        return {}
+        sample_p = config.PROJECT_ROOT / "data" / "sample" / "application_train_sample.csv"
+        if sample_p.exists():
+            csv_path = sample_p
+        else:
+            return {}
 
     df = pd.read_csv(csv_path, nrows=5000)
+    # Prefer a clean row: TARGET=0 + no DAYS_EMPLOYED anomaly
+    clean = df[(df["TARGET"] == 0) & (df["DAYS_EMPLOYED"] != 365243)]
+    if len(clean) == 0:
+        clean = df[df["DAYS_EMPLOYED"] != 365243]
+    if len(clean) == 0:
+        clean = df
+
+    row = clean.iloc[0]
     sample: dict[str, Any] = {}
-
-    # Numeric: median
-    num_cols = df.select_dtypes(include="number").columns
-    for c in num_cols:
-        if c in (config.ID_COL, "TARGET"):
+    for c, v in row.items():
+        if c == "TARGET":
             continue
-        v = df[c].median()
-        sample[c] = int(round(v)) if pd.notna(v) else 0
-
-    # Categorical: mode
-    cat_cols = df.select_dtypes(include="object").columns
-    for c in cat_cols:
-        mode_vals = df[c].mode()
-        sample[c] = str(mode_vals.iloc[0]) if len(mode_vals) > 0 else "Unknown"
-
+        if hasattr(v, "item"):
+            sample[c] = v.item()
+        elif pd.isna(v):
+            sample[c] = None
+        else:
+            sample[c] = v
     return sample
 
 

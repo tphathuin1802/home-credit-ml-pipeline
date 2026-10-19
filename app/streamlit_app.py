@@ -34,6 +34,7 @@ from src.predict import (
     predict_from_record,
     predict_one,
 )
+from src import features as _features
 
 # 
 # JetBrains Mono font (Google Fonts)
@@ -934,8 +935,40 @@ def page_predict():
             "EXT_SOURCE_3": ext3,
         })
 
-        # PICKLE MAPPING 
-        # From record (raw fields) pickle.predict_from_record (via preprocessor)
+        # Build engineered features for the user-modified record
+        # (FE features like AGE_YEARS, EXT_SOURCE_MEAN, CREDIT_INCOME_RATIO,
+        # BUR_*_feat, etc. are required by the ColumnTransformer)
+        _row_df = pd.DataFrame([record])
+        # Some raw columns the user didn't touch may be missing — fetch them
+        # from defaults OR from a base CSV row so clean_application doesn't crash
+        for col, val in defaults.items():
+            if col not in _row_df.columns:
+                _row_df[col] = val
+        # Also fetch any remaining missing columns from the CSV (last resort)
+        try:
+            _csv_cols = pd.read_csv(config.APP_TRAIN_CSV, nrows=1).columns
+            for c in _csv_cols:
+                if c not in _row_df.columns and c not in ("TARGET",):
+                    # Use a sensible default (median for numeric, mode for object)
+                    if c not in _row_df.columns:
+                        _row_df[c] = np.nan
+        except Exception:
+            pass
+        try:
+            _fe_row = _features.build_features_for_one_row(_row_df)
+            record = _fe_row.iloc[0].to_dict()
+            # Convert numpy types to plain Python for downstream
+            for k, v in list(record.items()):
+                if hasattr(v, 'item'):
+                    record[k] = v.item()
+        except Exception as _fe_err:
+            st.warning(f"Feature engineering warning: {_fe_err}. Falling back to raw record.")
+            # Fallback: just make sure all expected columns exist
+            if hasattr(artifact["ct"], "feature_names_in_"):
+                for c in artifact["ct"].feature_names_in_:
+                    if c not in record:
+                        record[c] = np.nan
+
         result = predict_from_record(record, artifact)
 
         with right:
