@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 from src import config
+from src import predict
 from src.predict import (
     get_default_customer,
     get_model_info,
