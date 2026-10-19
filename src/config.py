@@ -31,7 +31,20 @@ for _p in (DATA_RAW, DATA_PROCESSED, MODEL_DIR, NOTEBOOK_DIR):
 # ----------------------------------------------------------------------
 # Dataset files (Kaggle "Home Credit Default Risk")
 # ----------------------------------------------------------------------
-APP_TRAIN_CSV: Path = DATA_RAW / "application_train.csv"
+# Tìm application_train.csv:
+# 1) Ưu tiên data/raw/application_train.csv (full dataset)
+# 2) Fallback sang sample (5000 dòng, đủ cho get_default_customer)
+#    — dùng khi deploy lên cloud (full CSV không có trên cloud)
+_APP_CSV_CANDIDATES = [
+    DATA_RAW / "application_train.csv",
+    DATA_RAW / "application_train_sample.csv",
+]
+for _p in _APP_CSV_CANDIDATES:
+    if _p.exists():
+        APP_TRAIN_CSV: Path = _p
+        break
+else:
+    APP_TRAIN_CSV = _APP_CSV_CANDIDATES[0]  # vẫn trỏ path hợp lệ để lỗi rõ ràng
 APP_TEST_CSV: Path = DATA_RAW / "application_test.csv"
 BUREAU_CSV: Path = DATA_RAW / "bureau.csv"
 BUREAU_BALANCE_CSV: Path = DATA_RAW / "bureau_balance.csv"

@@ -1,18 +1,7 @@
-# Streamlit Cloud / production dependencies
-# Dùng loose version để tránh resolver conflict trên Streamlit Cloud.
-# Streamlit Cloud hiện chạy Python 3.11 / 3.12 — các pin dưới đây tương thích cả hai.
-
-# --- Core data ---
-numpy>=1.26.0
-pandas>=2.2.0
-
-# --- Modeling (cần để load model.joblib) ---
-scikit-learn>=1.4.0
-lightgbm>=4.3.0
+lightgbm>=4.0.0
+scikit-learn>=1.3.0
 joblib>=1.3.0
-
-# --- Visualization ---
-matplotlib>=3.8.0
-
-# --- Web app ---
-streamlit>=1.32.0
+numpy>=1.24.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+streamlit>=1.30.0
