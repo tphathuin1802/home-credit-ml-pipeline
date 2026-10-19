@@ -20,10 +20,11 @@ env/
 *.swp
 .DS_Store
 
-# Data - KHONG commit (file rat nang, co ban quyen)
-data/
-!data/.gitkeep
-!data/processed/.gitkeep
+# Data - KHONG commit full dataset (rat nang, co ban quyen)
+# Cho phep: file sample nho (2.7MB) + .gitkeep de giu folder
+data/**
+!data/**/.gitkeep
+!data/raw/application_train_sample.csv
 
 # Power BI - giữ scripts + theme + docs + screenshots, không commit data
 powerbi/data/*.csv
@@ -32,10 +33,9 @@ powerbi/data/*.csv
 notebooks/.ipynb_checkpoints/
 *.ipynb_checkpoints
 
-# Model artifacts (co the commit mot vai file de demo, nhung mac dinh ignore)
-model/*.joblib
+# Model artifacts (PNG plots được commit để hiển thị trên cloud)
+# NOTE: model.joblib cần lên cloud để app hoạt động — KHÔNG ignore
 model/*.pkl
-model/*.png
 
 # Test / coverage
 .pytest_cache/
@@ -49,3 +49,7 @@ htmlcov/
 
 # Kaggle cache
 .cache/
+
+# Log files - KHONG commit (log training, khong can lich su)
+*.log
+!logs/.gitkeep

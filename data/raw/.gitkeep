@@ -1,0 +1,5 @@
+# Raw data goes here; populated by Kaggle download.
+# `application_train_sample.csv` (2.7 MB, 5000 rows) is committed to git
+# directly so the EDA tab works on Streamlit Cloud.
+# Full `application_train.csv` (166 MB) is git-ignored; track via LFS if
+# you need to push it (see scripts/push_data_lfs.py).
