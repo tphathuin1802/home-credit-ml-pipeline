@@ -533,33 +533,43 @@ class _ClipTransformer:
 # ----------------------------------------------------------------------
 # Single-row feature builder (for predict / streamlit)
 # ----------------------------------------------------------------------
-def build_features_for_one_row(app_row: pd.DataFrame) -> pd.DataFrame:
+def build_features_for_one_row(
+    app_row: pd.DataFrame,
+    expected_cols: list[str] | None = None,
+) -> pd.DataFrame:
     """Build engineered features for a SINGLE application row.
 
     Returns a 1-row DataFrame with all expected feature columns (app + bureau +
-    prev + installments + pos + cc) so that ``predict_from_record`` works
-    without raising "columns are missing" ValueError.
+    prev + installments + pos + cc) so that ``predict_batch`` / ``predict_one``
+    work without raising "columns are missing" ValueError.
 
-    Since we don't have bureau/prev/etc. for an arbitrary user input, the
-    corresponding aggregate columns are filled with 0 and the HAS_* flags
-    are set to 0. The model has been trained on the same convention (users
-    without bureau → HAS_BUREAU=0, aggregated columns=0).
+    Parameters
+    ----------
+    app_row : pd.DataFrame
+        Single-row DataFrame with raw application fields.
+    expected_cols : list[str] | None
+        If provided, ensure the output has ALL these columns (filling missing
+        with 0 for ``*_feat`` columns, NaN otherwise). This is the safest way
+        to guarantee the output is compatible with the trained model.
+
+    Notes
+    -----
+    For a single arbitrary user input we have NO bureau/prev/inst/pos/cc data.
+    The model handles this via two conventions:
+      - ``HAS_*`` flags = 0 (user has no bureau/prev/etc)
+      - All aggregate columns (``BUR_*_feat``, ``PREV_*_feat`` etc.) = 0
     """
     # 1) Clean + app features
     app_clean = clean_application(app_row)
     app_feat  = build_application_features(app_clean)
 
-    # 2) Get expected aggregate column names from a full pipeline run
-    #    (we can't run on a single row alone, so we read from artifact at predict time)
-    # For now, build empty dataframes with HAS_* flags; the ColumnTransformer's
-    # imputer will handle the rest.
+    # 2) Get SK_ID_CURR
     sk_id = app_feat["SK_ID_CURR"].iloc[0] if "SK_ID_CURR" in app_feat.columns else 0
-    base_idx = app_feat.index
 
-    # Empty bureau features: 0s for everything + HAS_BUREAU=0
+    # 3) Empty bureau features: just HAS_BUREAU=0
     bureau_empty = pd.DataFrame({"SK_ID_CURR": [sk_id], "HAS_BUREAU": [0]})
 
-    # Empty extras: 0s for everything + HAS_*=0
+    # 4) Empty extras: HAS_EXTRA_*=0
     extras_empty = [
         pd.DataFrame({"SK_ID_CURR": [sk_id], "HAS_EXTRA_0": [0]}),  # prev
         pd.DataFrame({"SK_ID_CURR": [sk_id], "HAS_EXTRA_1": [0]}),  # inst
@@ -567,4 +577,19 @@ def build_features_for_one_row(app_row: pd.DataFrame) -> pd.DataFrame:
     ]
 
     merged = merge_features(app_feat, bureau_empty, *extras_empty)
+
+    # 5) CRITICAL: ensure ALL expected columns exist. For *_feat columns
+    #    (aggregates from bureau/prev/inst/pos/cc), fill with 0.
+    if expected_cols:
+        for c in expected_cols:
+            if c not in merged.columns:
+                # bureau/prev/inst/pos/cc aggregates default to 0 (user has none)
+                # everything else (raw app columns) defaults to NaN
+                if c.endswith("_feat") or c.startswith("BUR_") or c.startswith("PREV_") \
+                   or c.startswith("INST_") or c.startswith("POS_") or c.startswith("CC_") \
+                   or c.startswith("HAS_"):
+                    merged[c] = 0
+                else:
+                    merged[c] = np.nan
+
     return merged

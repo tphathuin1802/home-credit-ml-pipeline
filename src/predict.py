@@ -80,19 +80,28 @@ def predict_from_record(record: dict, model_dict: dict) -> dict:
         lgb_b = model_dict["lgb"]
         iso_r = model_dict.get("iso_reg")
 
-        # Use the ColumnTransformer's own feature_names_in_ (raw columns)
-        # NOT the transformed feature_names which are prefixed (cat__, num__)
-        if hasattr(ct, "feature_names_in_"):
-            expected_cols = list(ct.feature_names_in_)
-        else:
-            expected_cols = model_dict.get("feature_names", [])
+        # ALWAYS use the ColumnTransformer's own feature_names_in_ (raw columns)
+        # NEVER use feature_names from artifact — those are TRANSFORMED names
+        # (e.g. "num__AGE_YEARS", "cat__NAME_CONTRACT_TYPE_Cash loans") and
+        # would cause "columns are missing" ValueError.
+        if not hasattr(ct, "feature_names_in_"):
+            raise RuntimeError(
+                "ColumnTransformer has no feature_names_in_ — model artifact "
+                "is corrupted or built with a different sklearn version."
+            )
+        expected_cols = list(ct.feature_names_in_)
+        logger.debug("predict_from_record: %d expected raw columns", len(expected_cols))
 
         X_raw = pd.DataFrame([record])
 
         # Build a single-row DataFrame with all expected columns; fill missing with NaN
         missing = [c for c in expected_cols if c not in X_raw.columns]
         if missing:
-            X_raw = pd.concat([X_raw, pd.DataFrame({c: [np.nan] for c in missing})], axis=1)
+            logger.debug("predict_from_record: filling %d missing cols with NaN", len(missing))
+            X_raw = pd.concat(
+                [X_raw, pd.DataFrame({c: [np.nan] for c in missing}, index=X_raw.index)],
+                axis=1,
+            )
 
         # Reorder to match ct.feature_names_in_ exactly
         X_raw = X_raw[expected_cols]
@@ -192,10 +201,51 @@ def predict_one(record: dict) -> dict:
 
 
 def predict_batch(df: pd.DataFrame) -> pd.DataFrame:
-    """Dự đoán hàng loạt từ DataFrame."""
+    """Dự đoán hàng loạt từ DataFrame.
+
+    Hỗ trợ cả 2 schema của model artifact:
+      - Schema mới (v4): ``ct`` + ``lgb`` + ``iso_reg`` (sklearn API)
+      - Schema cũ: ``preprocessor`` + ``lgb_booster`` (lightgbm Booster API)
+    """
     model_dict = _load_model()
-    ct      = model_dict["preprocessor"]
-    lgb_b   = model_dict["lgb_booster"]
+
+    # ── Resolve model components (handle both schemas) ────────────────────
+    if "ct" in model_dict and "lgb" in model_dict:
+        # Schema mới: ColumnTransformer (sklearn) + lgb sklearn classifier
+        ct      = model_dict["ct"]
+        lgb_b   = model_dict["lgb"]
+        is_sklearn_lgb = True
+    elif "preprocessor" in model_dict and "lgb_booster" in model_dict:
+        # Schema cũ: preprocessor (ColumnTransformer) + lgb_booster (Booster)
+        ct      = model_dict["preprocessor"]
+        lgb_b   = model_dict["lgb_booster"]
+        is_sklearn_lgb = False
+    elif "pipeline" in model_dict:
+        # Schema v3: pipeline
+        pipeline = model_dict["pipeline"]
+        cal = model_dict.get("calibration")
+        thresh  = float(model_dict.get("best_threshold", 0.5))
+        sf      = model_dict.get("score_formula", {})
+        risk_bands = model_dict.get("risk_bands", {})
+        offset  = float(sf.get("offset", 620))
+        factor  = float(sf.get("factor", 28.85))
+
+        ids = df[config.ID_COL].values if config.ID_COL in df.columns else range(len(df))
+        raw_probs = pipeline.predict_proba(df)[:, 1]
+        if cal is not None and hasattr(cal, "predict"):
+            pd_vals = np.clip(cal.predict(raw_probs), 1e-6, 1 - 1e-6)
+        else:
+            pd_vals = raw_probs
+        scores  = np.array([pd_to_score(p, offset, factor) for p in pd_vals])
+        bands   = [score_to_band(s, risk_bands) for s in scores]
+        decisns = np.where(pd_vals < thresh, "APPROVE", "REJECT")
+        return pd.DataFrame({
+            config.ID_COL: ids, "PD": pd_vals.round(4), "Score": scores.round(1),
+            "RiskBand": bands, "Decision": decisns,
+        })
+    else:
+        raise RuntimeError("Model artifact has unknown schema: no ct/preprocessor/pipeline")
+
     iso_r   = model_dict.get("iso_reg")
     thresh  = float(model_dict.get("best_threshold", 0.5))
     sf      = model_dict.get("score_formula", {})
@@ -205,14 +255,21 @@ def predict_batch(df: pd.DataFrame) -> pd.DataFrame:
 
     ids = df[config.ID_COL].values if config.ID_COL in df.columns else range(len(df))
 
+    # Make sure all expected columns exist; fill missing with NaN
     if hasattr(ct, "feature_names_in_"):
-        for c in ct.feature_names_in_:
-            if c not in df.columns:
-                df = df.copy()
+        missing = [c for c in ct.feature_names_in_ if c not in df.columns]
+        if missing:
+            df = df.copy()
+            for c in missing:
                 df[c] = np.nan
+        # Reorder to match ColumnTransformer's expected order
+        df = df[list(ct.feature_names_in_)]
 
     X_proc = ct.transform(df)
-    raw_probs = lgb_b.predict(X_proc, num_iteration=lgb_b.best_iteration)
+    if is_sklearn_lgb:
+        raw_probs = lgb_b.predict_proba(X_proc)[:, 1]
+    else:
+        raw_probs = lgb_b.predict(X_proc, num_iteration=lgb_b.best_iteration)
     if iso_r is not None:
         pd_vals = iso_r.predict(raw_probs)
     else:

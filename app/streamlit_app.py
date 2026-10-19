@@ -955,21 +955,32 @@ def page_predict():
         except Exception:
             pass
         try:
-            _fe_row = _features.build_features_for_one_row(_row_df)
-            record = _fe_row.iloc[0].to_dict()
-            # Convert numpy types to plain Python for downstream
-            for k, v in list(record.items()):
-                if hasattr(v, 'item'):
-                    record[k] = v.item()
+            # Build FE features + ensure all expected columns exist
+            # (needed for users without bureau/prev/inst/pos/cc data)
+            _ct = artifact.get("ct") or artifact.get("preprocessor")
+            _expected = list(_ct.feature_names_in_) if hasattr(_ct, "feature_names_in_") else None
+            _fe_row = _features.build_features_for_one_row(_row_df, expected_cols=_expected)
         except Exception as _fe_err:
             st.warning(f"Feature engineering warning: {_fe_err}. Falling back to raw record.")
-            # Fallback: just make sure all expected columns exist
-            if hasattr(artifact["ct"], "feature_names_in_"):
-                for c in artifact["ct"].feature_names_in_:
-                    if c not in record:
-                        record[c] = np.nan
+            _fe_row = _row_df
 
-        result = predict_from_record(record, artifact)
+        # Use predict_batch with a 1-row DataFrame. It correctly handles
+        # column reordering, NaN fills, and the ColumnTransformer schema.
+        # The function returns a DataFrame with pd, score, risk_band, etc.
+        _fe_row = _fe_row.reset_index(drop=True)
+        _batch = predict.predict_batch(_fe_row)
+        if len(_batch) == 0:
+            raise RuntimeError("predict_batch returned empty result")
+        _r = _batch.iloc[0].to_dict()
+        result = {
+            "pd":         float(_r.get("pd", _r.get("pd_calibrated", 0.0))),
+            "score":      float(_r.get("score", 600.0)),
+            "risk_band":  str(_r.get("risk_band", "Unknown")),
+            "decision":   str(_r.get("decision", "REJECT")),
+            "raw_prob":   float(_r.get("raw_prob", 0.0)),
+            "threshold":  float(artifact.get("best_threshold", 0.05)),
+            "model_name": str(artifact.get("model_name", "LightGBM_calibrated")),
+        }
 
         with right:
             st.markdown("### Prediction Result")
