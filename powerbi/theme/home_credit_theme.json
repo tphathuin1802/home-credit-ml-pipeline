@@ -5,14 +5,10 @@
     "#1A1A1A",
     "#6B6B6B",
     "#B11226",
-    "#FFF5F5",
     "#F5A623",
     "#3FAE5C",
     "#2C7BB6",
-    "#8B0000",
-    "#404040",
-    "#A6A6A6",
-    "#E6E6E6"
+    "#8B0000"
   ],
   "background": "#FFFFFF",
   "foreground": "#1A1A1A",
@@ -32,7 +28,7 @@
     "header": {
       "fontFace": "Segoe UI Semibold",
       "fontSize": 12,
-      "color": "#FFFFFF"
+      "color": "#1A1A1A"
     },
     "label": {
       "fontFace": "Segoe UI",
@@ -43,62 +39,6 @@
       "fontFace": "Segoe UI Light",
       "fontSize": 28,
       "color": "#ED1C24"
-    }
-  },
-  "visualStyles": {
-    "*": {
-      "*": {
-        "background": [
-          {
-            "color": "#FFFFFF",
-            "transparency": 0
-          }
-        ],
-        "border": [
-          {
-            "color": "#E5E5E5",
-            "width": 1
-          }
-        ],
-        "outlineStyle": [
-          {
-            "weight": 1
-          }
-        ]
-      }
-    },
-    "card": {
-      "*": {
-        "background": [
-          {
-            "color": "#FFFFFF"
-          }
-        ],
-        "border": [
-          {
-            "color": "#ED1C24",
-            "width": 2
-          }
-        ]
-      }
-    },
-    "slicer": {
-      "*": {
-        "background": [
-          {
-            "color": "#FFF5F5"
-          }
-        ]
-      }
-    },
-    "page": {
-      "*": {
-        "background": [
-          {
-            "color": "#FFFFFF"
-          }
-        ]
-      }
     }
   }
 }
