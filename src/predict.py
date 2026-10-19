@@ -67,10 +67,15 @@ def predict_from_record(record: dict, model_dict: dict) -> dict:
     factor: float = float(model_dict.get("score_formula", {}).get("factor",
         28.85 if model_dict.get("score_pdo", 20) == 20 else
         model_dict["score_pdo"] / np.log(2)))
-    risk_bands: dict = model_dict.get("risk_bands", {
-        "Excellent": [650, 850], "Good": [550, 650], "Medium": [500, 550],
-        "High": [450, 500], "Very High": [300, 450],
-    })
+    # NOTE: bands MUST be ordered from HIGHEST score to LOWEST so the first
+    # matching range is the best (lowest-risk) band. (Low score = high risk.)
+    risk_bands: dict = model_dict.get("risk_bands") or {
+        "Excellent":  [760, 1000],
+        "Good":       [700, 760],
+        "Fair":       [640, 700],
+        "Poor":       [580, 640],
+        "Very Poor":  [300, 580],
+    }
     thresh: float = float(model_dict.get("best_threshold", 0.5))
     model_name: str = str(model_dict.get("model_name", "LightGBM_calibrated"))
 
@@ -173,7 +178,14 @@ def _load_model() -> dict[str, Any]:
             f"Không tìm thấy model ở {candidates}. "
             "Chạy notebook `notebooks/home_credit_pipeline.ipynb` trước."
         )
-    artifact = joblib.load(path)
+    try:
+        artifact = joblib.load(path)
+    except Exception as e:
+        raise RuntimeError(
+            f"Không load được model từ {path} ({path.stat().st_size} bytes). "
+            f"Có thể file bị corrupt hoặc version pickle không tương thích. "
+            f"Python hiện tại: {__import__('sys').version}. Lỗi: {e}"
+        ) from e
 
     # ── Normalize schema: ensure 'pipeline' key exists for predict_from_record ──
     # Schema mới (v4): ct + lgb + iso_reg
@@ -249,7 +261,15 @@ def predict_batch(df: pd.DataFrame) -> pd.DataFrame:
     iso_r   = model_dict.get("iso_reg")
     thresh  = float(model_dict.get("best_threshold", 0.5))
     sf      = model_dict.get("score_formula", {})
-    risk_bands = model_dict.get("risk_bands", {})
+    # NOTE: risk bands MUST be in descending score order so that the first
+    # matching range is the highest-quality band. (Low score = high risk.)
+    risk_bands = model_dict.get("risk_bands") or {
+        "Excellent":  [760, 1000],
+        "Good":       [700, 760],
+        "Fair":       [640, 700],
+        "Poor":       [580, 640],
+        "Very Poor":  [300, 580],
+    }
     offset  = float(sf.get("offset", 620))
     factor  = float(sf.get("factor", 28.85))
 
@@ -298,10 +318,13 @@ def get_model_info() -> dict[str, Any]:
     factor = pdo / np.log(2)
     offset = sb + factor * np.log(odds_b)
 
-    risk_bands = model_dict.get("risk_bands", {
-        "Excellent": [650, 850], "Good": [550, 650], "Medium": [500, 550],
-        "High": [450, 500], "Very High": [300, 450],
-    })
+    risk_bands = model_dict.get("risk_bands") or {
+        "Excellent":  [760, 1000],
+        "Good":       [700, 760],
+        "Fair":       [640, 700],
+        "Poor":       [580, 640],
+        "Very Poor":  [300, 580],
+    }
 
     info = {
         "model_name":   str(model_dict.get("model_name", "LightGBM_calibrated")),
