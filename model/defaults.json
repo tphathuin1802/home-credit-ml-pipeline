@@ -1,21 +1,3 @@
-{
-  "model_name": "LightGBM_calibrated",
-  "best_threshold": 0.05,
-  "score_base": 600.0,
-  "score_pdo": 20.0,
-  "score_odds_base": 50.0,
-  "factor": 28.85390081777927,
-  "offset": 712.8771237954945,
-  "test_metrics": {
-    "auc": 0.7582084983713206,
-    "gini": 0.5164169967426413,
-    "ks": 0.37513606391703946,
-    "brier": 0.06784552351465427,
-    "pr_auc": 0.2282378619072164,
-    "test_f1": 0.22317596566523606,
-    "test_recall": 0.8623548922056384,
-    "test_precision": 0.12817352723687453,
-    "test_threshold": 0.05,
-    "best_threshold": 0.05
-  }
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:3aa70c4f6e11514d274bdd177134ea6f9385ca27b5cd390b5882ec7edb060d7e
+size 3780
