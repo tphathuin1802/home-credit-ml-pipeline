@@ -1,38 +1,58 @@
-# 🏦 Home Credit Default Risk
+# Home Credit Default Risk
 
-> **End-to-end ML pipeline** — từ 7 bảng dữ liệu thô → model xác suất vỡ nợ (PD) → điểm tín dụng (scorecard) → web app Streamlit có thể deploy.
+> An end-to-end machine-learning pipeline that turns Home Credit's seven raw tables into a deployable Probability-of-Default model with a scorecard, five risk bands and a Streamlit front-end.
 
 ![Streamlit — Predict Tab](assets/predict_tab.png)
 
 ---
 
-## 🎯 Một câu — dự án làm gì?
+## Table of contents
 
-**Score mỗi đơn đăng ký Home Credit: khách này có trả nợ không?**  
-Pipeline chuẩn hóa dữ liệu 307k hồ sơ, huấn luyện LightGBM + Isotonic Calibration, và trả về **PD (0–1) + Credit Score (0–1000) + Risk Band (A–E)**.
-
----
-
-## 📊 Kết quả nổi bật
-
-| Metric | Giá trị |
-|---|---|
-| **AUC** | **0.758** |
-| **Gini** | **0.516** |
-| **KS Statistic** | **0.375** |
-| **Recall @ τ=0.05** | **86.2%** |
-| **Features** | **301** |
-| **Default Rate** | **8.0%** |
-
-> Baseline "luôn đoán không vỡ nợ" đã đúng 92% → Accuracy vô nghĩa.  
-> **AUC 0.758** nghĩa là model phân tách tốt giữa defaulter và non-defaulter.
+1. [One-line summary](#-one-line-summary)
+2. [Headline metrics](#-headline-metrics)
+3. [30-second demo](#-30-second-demo)
+4. [Web app tour](#-web-app-tour)
+5. [Methodology](#-methodology)
+6. [Full model comparison](#-full-model-comparison-test-set-n--7500)
+7. [Project structure](#-project-structure)
+8. [Getting started](#-getting-started)
+9. [Key design decisions](#-key-design-decisions)
+10. [Limitations and roadmap](#-limitations-and-roadmap)
+11. [Citation and license](#-citation-and-license)
 
 ---
 
-## ⚡ Demo nhanh
+## One-line summary
 
-```
-# Clone & chạy web app ngay lập tức
+**Score every Home Credit applicant: will this customer default?**
+
+The pipeline cleans 307,511 raw applications, engineers 301 features from the seven-table relational schema, trains LightGBM with Optuna tuning and an isotonic calibration layer, and returns a calibrated PD (0–1), a FICO-style credit score (0–1000) and an A-to-E risk band — all reproducible from a single notebook and deployable as a Docker container.
+
+---
+
+## Headline metrics
+
+Selected model: **LightGBM with isotonic regression calibration**, evaluated on a held-out test fold of 7,500 customers.
+
+| Metric                | Value      | Why it matters                                                                |
+| --------------------- | ---------- | ----------------------------------------------------------------------------- |
+| **AUC**               | **0.758**  | Top-decile separation strength; benchmark for ranking power                   |
+| **Gini**              | **0.516**  | = 2 × AUC − 1; credit-scoring convention                                      |
+| **KS statistic**      | **0.375**  | Maximum separation between good and bad CDFs; above the 0.30 "good" benchmark |
+| **Brier score**       | **0.068**  | Mean-squared error of probabilities; lower is better                          |
+| **Recall @ τ = 0.05** | **86.2 %** | Share of true defaulters we catch at the operating threshold                  |
+| **Precision @ τ**     | **12.8 %** | Share of flagged applicants who are real defaulters (≈ 1.6 × base rate)       |
+| **Features**          | **301**    | Engineered across four functional blocks                                      |
+| **Default rate**      | **8.04 %** | Class-imbalance baseline; justifies AUC/KS/Brier over accuracy                |
+| **PR-AUC**            | **0.228**  | Robust to the 8% base rate                                                    |
+
+> A naive "always predict non-default" classifier already scores 92 % accuracy, so accuracy carries no information in this setting.
+
+---
+
+## 30-second demo
+
+```bash
 git clone https://github.com/phat/home-credit-default-risk.git
 cd home-credit-default-risk
 
@@ -40,149 +60,151 @@ pip install -r requirements-app.txt
 streamlit run app/streamlit_app.py
 ```
 
-> App đã load sẵn trained model từ `model/`.  
-> Không cần tải dữ liệu Kaggle để demo.
+The app boots with a pre-trained model already loaded from `model/` — no Kaggle credentials, no training run required.
 
 ---
 
-## 🖥️ Web App — 4 Tabs
+## Web app tour
 
-| Tab | Nội dung |
-|---|---|
-| **Overview** | Giới thiệu dataset, phân bố TARGET, kiến trúc pipeline |
-| **EDA** | Biểu đồ interactive: EXT_SOURCE, income, age theo TARGET |
-| **Predict** | Nhập hồ sơ khách → PD + Score + Risk Band ngay lập tức |
-| **Performance** | Bảng metrics, ROC / PR / KS / Calibration curves, Feature Importance |
+Four tabs, one persona per tab.
 
-### 📈 Performance Dashboard
+| Tab             | Persona     | Contents                                                                |
+| --------------- | ----------- | ----------------------------------------------------------------------- |
+| **Overview**    | Executive   | Dataset description, target distribution, pipeline architecture diagram |
+| **EDA**         | Analyst     | Interactive distributions of EXT_SOURCE, income, age vs TARGET          |
+| **Predict**     | Underwriter | Manual entry form → live PD, score and risk band                        |
+| **Performance** | Validator   | Metrics table, ROC/PR/KS/Calibration curves, top-feature importance     |
+
+### Performance dashboard
+
 ![Performance Dashboard](assets/performance.png)
 
-### 🔮 Predict Tab — Live Scoring
+### Predict tab — live scoring
+
 ![Predict Tab](assets/predict_tab.png)
 
 ---
 
-## 🔬 Methodology
+## Methodology
 
-### Data Pipeline (7 bảng → 301 features)
-
-```
-application_train.csv      ← master table + TARGET (307,511 rows)
-         │
-         ├── bureau                   (1.7M) → BUR_ACTIVE_CNT, BUR_DEBT_RATIO …
-         ├── bureau_balance           (27.3M) → monthly status aggregation
-         ├── previous_application     (1.7M) → PREV_AMT_SUM, PREV_APPROVE_RATE …
-         ├── installments_payments    (13.6M) → INST_PAY_RATIO, INST_LATE_7D_SUM …
-         ├── POS_CASH_balance        (10.0M) → POS_UTIL_MEAN, POS_CNT …
-         └── credit_card_balance      (3.8M) → CC_UTIL_MEAN …
-```
-
-### Feature Engineering Blocks
-
-| Block | Features |
-|---|---|
-| **Application Cleaning** | `AGE_YEARS`, `EMPLOYED_YEARS`, `CREDIT_TERM`, `EXT_SOURCE_MEAN/STD/PROD` |
-| **Bureau Aggregation** | `BUR_ACTIVE_CNT`, `BUR_OVERDUE_CNT`, `BUR_DEBT_RATIO`, `HAS_BUREAU` |
-| **Previous Apps + Installments** | `PREV_APPROVE_RATE`, `INST_LATE_7D_SUM`, `PREV_CNT_PAYMENT_MEAN` |
-| **POS + Credit Card** | `POS_UTIL_MEAN`, `CC_UTIL_MEAN` |
-
-### Modeling Pipeline
+### Data pipeline: seven tables → 301 features
 
 ```
-Train / Valid / Test  (70 / 15 / 15)  ← stratified split, seed=42
+application_train.csv           ← Master table with TARGET (307,511 rows)
+       │
+       ├── bureau                     (1.7 M) → BUR_ACTIVE_CNT, BUR_DEBT_RATIO …
+       ├── bureau_balance             (27.3 M) → monthly status aggregation
+       ├── previous_application       (1.7 M) → PREV_AMT_SUM, PREV_APPROVE_RATE …
+       ├── installments_payments      (13.6 M) → INST_PAY_RATIO, INST_LATE_7D_SUM …
+       ├── POS_CASH_balance          (10.0 M) → POS_UTIL_MEAN, POS_CNT …
+       └── credit_card_balance         (3.8 M) → CC_UTIL_MEAN …
+```
+
+### Feature engineering — four functional blocks
+
+| Block                             | Representative features                                                  |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| **Application cleaning & ratios** | `AGE_YEARS`, `EMPLOYED_YEARS`, `CREDIT_TERM`, `EXT_SOURCE_MEAN/STD/PROD` |
+| **Bureau aggregation**            | `BUR_ACTIVE_CNT`, `BUR_OVERDUE_CNT`, `BUR_DEBT_RATIO`, `HAS_BUREAU`      |
+| **Previous apps & instalments**   | `PREV_APPROVE_RATE`, `INST_LATE_7D_SUM`, `PREV_CNT_PAYMENT_MEAN`         |
+| **POS & credit card**             | `POS_UTIL_MEAN`, `CC_UTIL_MEAN`                                          |
+
+### Modelling pipeline
+
+```
+Train / Valid / Test  (70 / 15 / 15)   ← stratified split, seed=42
         │
         ▼
 ColumnTransformer
-  ├─ Median imputation (numeric)
-  ├─ Most-frequent + one-hot (categorical)
-  └─ StandardScaler (numeric)
+  ├── Median imputation (numeric)
+  ├── Most-frequent + one-hot (categorical)
+  └── StandardScaler (numeric)
         │
         ▼
-┌──────────────────┬──────────────────┐
-│  Logistic Reg   │  LightGBM (Optuna) │
-│  baseline        │  n_est=205, lr=0.047│
-│  class_weight    │  num_leaves=53      │
-│  = balanced      │  early-stop 15 rounds│
-└──────────────────┴──────────────────┘
+┌─────────────────────┬───────────────────────┐
+│  Logistic baseline  │  LightGBM (Optuna)    │
+│  C = 0.5            │  n_estimators = 205   │
+│  optional balanced  │  num_leaves    = 53   │
+│                     │  learning_rate= 0.047 │
+└─────────────────────┴───────────────────────┘
         │
         ▼
 Isotonic Regression (calibration)
-  Brier: 0.0677 → 0.0678
-  Recall @ τ=0.05: 86.2%
+  Brier:  0.0677 → 0.0678
+  Recall @ τ = 0.05:  86.2 %
 ```
 
-### Scorecard Formula (Siddiqui 2013)
+### Scorecard formula (Siddiqui 2013)
 
 ```
 score(PD) = 712.88 − 28.85 · ln( PD / (1 − PD) )
 ```
 
-| Band | Score Range | Avg PD | Empirical Default |
-|---|---|---|---|
-| **A** (Low risk) | 760–1000 | 1.79% | 1.92% |
-| **B** (Acceptable) | 640–760 | 4.67% | 5.02% |
-| **C** (Watch-list) | 480–640 | 8.47% | 8.70% |
-| **D** (Sub-standard) | 360–480 | 14.89% | 14.84% |
-| **E** (High risk) | 0–360 | 31.59% | 30.04% |
+| Band               | Score range | Avg PD  | Empirical default |
+| ------------------ | ----------- | ------- | ----------------- |
+| **A** Low risk     | 760 – 1000  | 1.79 %  | 1.92 %            |
+| **B** Acceptable   | 640 – 760   | 4.67 %  | 5.02 %            |
+| **C** Watch-list   | 480 – 640   | 8.47 %  | 8.70 %            |
+| **D** Sub-standard | 360 – 480   | 14.89 % | 14.84 %           |
+| **E** High risk    | 0 – 360     | 31.59 % | 30.04 %           |
 
-> Empirical default rate tăng đều qua các band → scorecard well-calibrated.
-
----
-
-## 🧪 Full Model Comparison (Test Set, n = 7,500)
-
-| Model | AUC | Gini | KS | Brier | PR-AUC | Recall | Precision |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Logistic | 0.7452 | 0.4904 | 0.3689 | 0.0684 | 0.2350 | 0.7927 | 0.1310 |
-| Logistic_balanced | 0.7412 | 0.4823 | 0.3626 | 0.1940 | 0.2288 | 1.0000 | 0.0831 |
-| **LightGBM** | **0.7594** | **0.5188** | **0.3858** | **0.0677** | **0.2365** | 0.8375 | 0.1329 |
-| LightGBM_calibrated ✓ | 0.7582 | 0.5164 | 0.3751 | 0.0678 | 0.2282 | **0.8624** | 0.1282 |
-
-> **Selected for deployment**: LightGBM + Isotonic Calibration.  
-> Trade-off: giảm chút AUC để đổi lấy **recall 86.2%** — bắt được hơn 5/6 defaulters.
+Empirical default rates rise monotonically across bands — the scorecard is well calibrated, with predicted and observed rates matching within ≈ 1.5 percentage points in every band.
 
 ---
 
-## 🗂️ Cấu trúc Project
+## Full model comparison (test set, n = 7,500)
+
+| Model                  |        AUC |       Gini |         KS |      Brier |     PR-AUC |     Recall | Precision |
+| ---------------------- | ---------: | ---------: | ---------: | ---------: | ---------: | ---------: | --------: |
+| Logistic               |     0.7452 |     0.4904 |     0.3689 |     0.0684 |     0.2350 |     0.7927 |    0.1310 |
+| Logistic (balanced)    |     0.7412 |     0.4823 |     0.3626 |     0.1940 |     0.2288 |     1.0000 |    0.0831 |
+| **LightGBM**           | **0.7594** | **0.5188** | **0.3858** | **0.0677** | **0.2365** |     0.8375 |    0.1329 |
+| LightGBM + Calibration |     0.7582 |     0.5164 |     0.3751 |     0.0678 |     0.2282 | **0.8624** |    0.1282 |
+
+> **Why LightGBM-calibrated, not raw LightGBM?** We give up 0.0012 AUC and 0.011 KS in exchange for **+2.5 percentage points of recall** (86.2 % vs 83.7 %) and probabilities fit for the scorecard. The cost in ranking is small; the gain in operating utility is large.
+
+---
+
+## Project structure
 
 ```
 home-credit-default-risk/
 ├── data/
-│   ├── raw/                    # Kaggle data (not committed)
-│   └── processed/              # Cached feature cache
+│   ├── raw/                    # Kaggle data — not committed
+│   └── processed/              # Cached feature matrix
 ├── notebooks/
-│   └── home_credit_pipeline.ipynb   # E2E pipeline, tất cả cells
+│   └── home_credit_pipeline.ipynb   # End-to-end pipeline, all cells
 ├── src/
-│   ├── config.py               # Paths, seeds, scorecard params
+│   ├── config.py               # Paths, seeds, scorecard parameters
 │   ├── download_data.py        # Kaggle download via kagglehub
-│   ├── features.py             # Cleaning + aggregation
-│   ├── train.py                # Model training + Optuna tuning
+│   ├── features.py             # Cleaning and aggregation
+│   ├── train.py                # Model training and Optuna tuning
 │   ├── evaluate.py             # AUC, Gini, KS, ROC, calibration
 │   └── predict.py              # load_artifacts, predict_one, score_customer
 ├── app/
-│   └── streamlit_app.py        # 4-tab web app
-├── model/                      # ← Artifacts sau khi train
+│   └── streamlit_app.py        # Four-tab web application
+├── model/                      # ← Artefacts written by train.py
 │   ├── model.joblib            # Pipeline + LightGBM + Isotonic
-│   ├── metrics.json           # Full metrics all models
-│   ├── defaults.json          # Threshold + scorecard formula
-│   ├── model_card.json        # Model card (metadata, risk bands)
-│   ├── predictions_test.csv   # Test set predictions
-│   └── *.png                  # ROC, PR, KS, calibration, importance
-├── powerbi/                    # Power BI dashboard (.pbix + screenshots)
-├── slides/                     # Pitch deck (HTML → PDF)
-│   └── assets/                 # Chart images embedded in deck
+│   ├── metrics.json            # Full metrics for all four models
+│   ├── defaults.json           # Threshold + scorecard constants
+│   ├── model_card.json         # Model metadata, risk bands, calibration
+│   ├── predictions_test.csv    # Test-fold predictions
+│   └── *.png                   # ROC, PR, KS, calibration, importance
+├── powerbi/                    # Power BI dashboard (.pbix + theme + docs)
+├── slides/                     # Pitch deck (HTML / PDF)
+│   └── assets/                 # Chart images embedded in the deck
 ├── tests/
-│   ├── test_features.py        # Unit tests feature engineering
-│   └── test_predict.py        # Integration tests predict.py
+│   ├── test_features.py        # Unit tests for feature engineering
+│   └── test_predict.py         # Integration tests for predict.py
 ├── Dockerfile
-├── requirements.txt            # Full ML stack (train)
-├── requirements-app.txt        # Streamlit only (deploy)
+├── requirements.txt            # Full ML stack (training)
+├── requirements-app.txt        # Streamlit only (deployment)
 └── README.md
 ```
 
 ---
 
-## 🚀 Bắt đầu
+## Getting started
 
 ### 1. Setup
 
@@ -192,36 +214,37 @@ cd home-credit-default-risk
 
 python -m venv .venv
 .venv\Scripts\activate            # Windows
-# source .venv/bin/activate       # macOS / Linux
+# source .venv/bin/activate      # macOS / Linux
 
 pip install -r requirements.txt
 ```
 
-### 2. Tải dữ liệu
+### 2. Download data
 
 ```bash
-# Đặt Kaggle credentials
-cp .env.example .env    # sửa KAGGLE_USERNAME / KAGGLE_KEY
+cp .env.example .env             # fill in KAGGLE_USERNAME and KAGGLE_KEY
 
-python -m src.download_data    # ~2.5 GB
+python -m src.download_data      # downloads ≈ 2.5 GB
 ```
 
-> Dữ liệu đã có trong `data/raw/` → bỏ qua bước này.
+> If `data/raw/` already contains the CSVs, skip this step.
 
-### 3. Train model (60–120s trên subsample)
+### 3. Train the model (60–120 s on a 12 k-row subsample)
 
 ```bash
 python -m src.train
 ```
 
-Output: `model/model.joblib`, `model/metrics.json`, `model/*.png`
+Writes `model/model.joblib`, `model/metrics.json`, `model/model_card.json` and the diagnostic plots.
 
-### 4. Chạy web app
+### 4. Launch the web app
 
 ```bash
 pip install -r requirements-app.txt
 streamlit run app/streamlit_app.py
 ```
+
+Open <http://localhost:8501>.
 
 ### 5. Docker
 
@@ -230,39 +253,54 @@ docker build -t hc-credit-risk .
 docker run -p 8501:8501 hc-credit-risk
 ```
 
----
+### 6. Power BI dashboard
 
-## 🔑 Key Design Decisions
-
-| Decision | Lý do |
-|---|---|
-| **LightGBM thay vì Neural Net** | Tabular data + small dataset → GBM consistently wins |
-| **Isotonic thay vì Platt** | Non-parametric, handles non-linear miscalibration |
-| **Recall-oriented threshold** | FN (missed defaulter) >> FP (false alarm) trong credit risk |
-| **301 features** | Aggressive aggregation từ 7 bảng, đủ signal cho model |
-| **Subsample 12k** | Fits local compute; full 307k run expected to lift AUC |
+Open `powerbi/homecredit.pbix` in Power BI Desktop, point to `powerbi/data/` and apply `powerbi/theme/home_credit_theme.json`. See `powerbi/README.md` for the full guide.
 
 ---
 
-## ⚠️ Limitations & Future Work
+## Key design decisions
 
-- **Sample size** — chạy trên 12k-row subsample; full 307k sẽ cải thiện AUC
-- **Drift monitoring** — PSI / KS drift tracking cần thiết khi portfolio thay đổi
-- **Fairness audit** — disaggregated metrics theo giới tính, độ tuổi trước khi deploy production
-- **Rejected inference** — training chỉ gồm approved loans; cần extension cho inference population
+| Decision                                        | Rationale                                                                                            |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **LightGBM over neural networks**               | Tabular data + 12 k samples → GBM consistently wins on discrimination and calibration                |
+| **Isotonic regression over Platt scaling**      | Non-parametric, captures any monotonic miscalibration; validation fold of 7,500 rows is large enough |
+| **F1 threshold with recall floor of 80 %**      | FN (missed defaulter) costs more than FP (false alarm) in credit risk                                |
+| **301 engineered features**                     | Aggressive aggregation across seven tables gives even a linear model real signal                     |
+| **12 k-row subsample for development**          | Fits local memory; full 307 k run expected to lift AUC further (see Limitations)                     |
+| **Scorecard via PD thresholds, not score cuts** | Empirically realised score range is 401–799, narrower than the textbook 300–850                      |
+
+---
+
+## Limitations and roadmap
+
+### Limitations
+
+- **Sample size** — training uses a 12,750-row stratified subsample; a full 307 k-row run is expected to lift AUC but is deferred to a future release.
+- **Drift monitoring absent** — PSI and KS drift tracking over `EXT_SOURCE_*` and `AMT_*` columns will be required before production.
+- **Fairness audit pending** — disaggregated metrics across gender and age bands must be produced before any rollout.
+- **Selection bias on training data** — only approved loans are observed; rejected-inference techniques are needed to close that gap.
+- **Logistic benchmark is lightweight** — no Weight-of-Evidence binning, no outlier treatment, no regularisation sweep; the LightGBM gap (Δ AUC ≈ 0.014) is therefore best interpreted as an **upper bound** on the true gain.
 
 ### Roadmap
-- [ ] TabNet / FT-Transformer thay LightGBM
-- [ ] LSTM/Transformer trên installment payment sequences
-- [ ] Reject inference để close selection-bias gap
-- [ ] Quarterly calibration refresh
+
+- [ ] TabNet and FT-Transformer as deep tabular alternatives
+- [ ] LSTM / Transformer over instalment-payment sequences
+- [ ] Reject inference to close the selection-bias gap
+- [ ] Quarterly calibration refresh and PSI / KS drift dashboards
+- [ ] Promote to the full 307 k-row dataset and rerun the bootstrap analysis
+- [ ] Power BI Service scheduled refresh via On-Premises Data Gateway
 
 ---
 
-## 📜 License
+## Citation and license
 
-MIT — free to use, modify, and deploy.
+If you use this work in academic or industrial research, please cite:
+
+> Huynh, P., Nguyen, D. (2026). _Home Credit Default Risk — End-to-End Probability-of-Default Pipeline with LightGBM and Isotonic Calibration._ Midterm project, Applied Mathematics in Economics & Finance, Ho Chi Minh University of Technology.
+
+**License.** MIT — free to use, modify and deploy, subject to retaining this notice.
 
 ---
 
-*Built with: Python · LightGBM · scikit-learn · Streamlit · Docker · Power BI*
+_Built with Python · LightGBM · scikit-learn · Optuna · Streamlit · Docker · Power BI Desktop._
