@@ -1,0 +1,559 @@
+
+===== PAGE 1 =====
+
+1 
+  
+ 
+ 
+FACULTY OF ECONOMICS MATHEMATICS 
+ 
+MIDTERM PROJECT REPORT 
+ESTIMATING THE PROBABILITY OF DEFAULT ON 
+THE HOME CREDIT DATASET 
+Supervisor: Lê Thị Thanh An Dr. 
+Students:  K234131613 – Huỳnh Tấn Phát 
+  K234131591 – Nguyễn Ngọc Anh Duy 
+Class: K234131613 
+Subject: Thematic unit 1 
+Subject code: 261EMM401001 
+ 
+Ho Chi Minh City, October/2026 
+
+===== PAGE 2 =====
+
+2 
+ABSTRACT 
+This report describes the construction of a credit-risk scoring workflow using the Home 
+Credit Default Risk dataset available on Kaggle. The dataset is provided as seven 
+interconnected tables: current applications, credit-bureau records, previous loans, 
+instalment payments, point-of-sale balances, credit-card balances, and monthly bureau 
+balances. These tables were aggregated into a single row per applicant, yielding 301 
+predictors that capture each individual's profile, repayment history, and the external 
+credit scores included with the data. 
+Four models were compared: two logistic regressions and two LightGBM models. An 
+isotonic calibration step is applied on top of the second LightGBM model. On a held-
+out test set comprising 7,500 applicants, the calibrated LightGBM model achieved an 
+AUC of 0.758 and a KS of 0.375. With the threshold set at 0.05, which maximises F1, 
+the model identifies 86.2% of defaulters. 
+The calibrated probabilities were subsequently converted into a score, anchored at 600 
+points with 20 points assigned for each doubling of the odds. Applicants were allocated 
+to five rating bands. Observed default rates rise consistently across these bands, from 
+1.92% in band A to 30.04% in band E. 
+The entire analysis can be reproduced from a single notebook, and the final model is 
+deployed via a Streamlit application packaged as a Docker image. One limitation should 
+be noted: only a 12,750-row subsample was available, so the results are subject to 
+considerable sampling uncertainty (discussed in Chapter 4). Training on the complete 
+dataset would likely yield improved results. 
+Keywords: credit risk, probability of default, scorecard, gradient boosting, probability 
+calibration, Home Credit, LightGBM, KS statistic. 
+ 
+ 
+
+===== PAGE 3 =====
+
+3 
+CHAPTER 1: QUESTION AND SCOPE 
+1.1 Research question 
+For loan applicants within the Home Credit portfolio (Population), does a gradient-
+boosted decision-tree ensemble with isotonic calibration (Intervention) yield higher 
+ranking quality and better-calibrated probability-of-default estimates than a regularised 
+logistic-regression baseline (Comparator), as assessed by AUC, KS, Brier score and 
+recall at a fixed operating threshold (Outcome), when both models are trained and 
+evaluated on the same engineered feature set and the same stratified held-out test fold 
+(Time / Setting)? 
+1.2. Rationale for Topic Selection 
+Home Credit serves borrowers that mainstream banks usually turn down—people in 
+emerging markets with little or no formal credit history. For these applicants, a 
+traditional bureau score is either missing or of limited value. Estimating the probability 
+of default (PD) thus becomes the core underwriting task. Basel's internal-ratings-based 
+approach also demands that PD estimates be both discriminating and well calibrated, 
+since expected loss equals PD times LGD times EAD. A model that ranks applicants 
+well but produces inconsistent probabilities is of little use for pricing or provisioning. 
+This project tackles exactly that dual requirement using a public, richly structured data 
+set. 
+ 
+Figure 1. Home Credit business overview. 
+1.3 Scope 
+All experiments rely on a stratified subsample of 12,750 applicants taken from the full 
+307,511-row extract (random_state = 42), keeping computation feasible on a local 
+machine. Performance on the full data would likely be higher, and subsample results 
+carry considerable sampling uncertainty (Chapter 4). The study addresses PD estimation 
+
+
+===== PAGE 4 =====
+
+4 
+only; pricing, LGD, EAD and regulatory-capital calculations are out of scope. 
+Deployment is a Streamlit application packaged as a Docker image, with a production-
+grade REST service left for future work. 
+1.4 Brief related work 
+Logistic regression has long been the industry standard in credit scoring, as it is 
+interpretable and converts easily into points-based scorecards (Hand &amp; Henley, 
+1997; Siddiqi, 2006). Benchmarking studies show ensemble methods often outperform 
+single classifiers, yet logistic regression remains a strong, transparent baseline 
+(Lessmann et al., 2015). Gradient boosting (Friedman, 2001) and its efficient 
+implementation LightGBM (Ke et al., 2017) are now staples of tabular risk modelling. 
+For probability calibration, Platt scaling (Platt, 1999) and isotonic regression (Zadrozny 
+&amp; Elkan, 2002) are the most common post-hoc corrections, and non-parametric 
+methods need a reasonably large hold-out set to stay reliable (Niculescu-Mizil &amp; 
+Caruana, 2005) — directly relevant to the modest validation fold used here. 
+ 
+CHAPTER 2: DATA AND PREPARATION 
+The data describe 307,511 loan applicants, each characterised by 122 raw variables in 
+the main application table. Six auxiliary tables hold the applicant’s history with Home 
+Credit and with other lenders. Every applicant is identified by SK_ID_CURR, and may 
+have any number of rows, including none, in each auxiliary table (Table 1). Because an 
+applicant can appear many times in these tables, they cannot be joined to the application 
+table directly; they have to be aggregated to one row per applicant first. 
+Table 1. Source tables of the Home Credit Default Risk dataset. 
+Table Content Link to applicant 
+application_train 
+One row per loan application: 
+demographics, income, loan terms, 
+housing, external scores and the binary 
+target. 
+SK_ID_CURR 
+bureau Credits reported by other financial 
+institutions to the credit bureau. SK_ID_CURR 
+bureau_balance Monthly status history of each bureau 
+credit. SK_ID_BUREAU 
+previous_application Earlier applications made by the same 
+customer at Home Credit. SK_ID_CURR 
+
+===== PAGE 5 =====
+
+5 
+Table Content Link to applicant 
+installments_payment
+s 
+Repayment record of previous loans, 
+one row per instalment. SK_ID_CURR 
+POS_CASH_balance Monthly balances of point-of-sale and 
+cash loans. SK_ID_CURR 
+credit_card_balance Monthly balances of credit cards held at 
+Home Credit. SK_ID_CURR 
+ 
+Roughly 8% of applicants default, so the target is moderately imbalanced. A classifier 
+that approves everyone would still be correct about 92% of the time, which is why 
+accuracy carries almost no information in this setting and is not used to compare models. 
+Figure 2 shows the class distribution together with the default rate across age groups. 
+ 
+Figure 2. Target distribution (counts, pie) and default rate by age group. 
+Missing data are another feature of this dataset. About 50 columns have a substantial 
+share of missing values, mostly housing characteristics and the three external scores 
+(Figure 3). Instead of imputing the external scores aggressively, the pipeline records 
+how many of them are present in a variable called EXT_SOURCE_COUNT. The 
+reasoning is that whether an applicant has an external score at all is itself informative 
+about their credit footprint, and that filling the gap with a mean or median would erase 
+that signal. 
+
+
+===== PAGE 6 =====
+
+6 
+ 
+Figure 3. Top 20 columns by missing rate. 
+ 
+CHAPTER 3: METHODOLOGY 
+3.1. Pipeline Overview 
+The workflow has four stages. In the first, the six auxiliary tables are summarised to one 
+row per applicant and merged with the application table on SK_ID_CURR. In the 
+second, the combined table is cleaned and enriched with engineered features. In the 
+third, models are trained, tuned and compared. In the fourth, the selected model is 
+calibrated, a threshold is chosen, scores and bands are constructed, and the result is 
+exposed through a web interface. Figure 6 outlines the preprocessing stage and Figure 
+7 the modelling stage. 
+ 
+
+
+===== PAGE 7 =====
+
+7 
+Figure 6. Block diagram of the data-preprocessing pipeline. 
+ 
+Figure 7. Block diagram of the modelling pipeline. 
+3.2. Data Partitioning 
+The sample is divided into training, validation and test folds, stratified on the target so 
+that each fold keeps the same default rate of about 8% (random_state = 42). Each fold 
+has a distinct role. The training fold is used to fit the models. The validation fold is used 
+for early stopping, calibration and threshold selection. The test fold is held back until 
+the very end, so that the metrics reported in Chapter 4 reflect performance on data that 
+played no part in any modelling decision. Table 2 gives the size of each fold. 
+Table 2. Stratified partition of the sample. 
+Fold Rows Default rate Stratified on 
+TARGET 
+Training 21,250 8.0% Yes 
+Validation 21,250 8.0% Yes 
+Test 7,500 8.0% Yes 
+
+
+===== PAGE 8 =====
+
+8 
+ 
+Figure 5. Stratified split used in this work. 
+3.3. Preprocessing and feature engineering 
+Preprocessing relies on a single scikit-learn ColumnTransformer (Pedregosa et al., 2011), fitted 
+only on the training fold and applied unchanged to the validation and test folds, keeping steps 
+consistent across models and preventing leakage. Numeric variables are median-imputed and 
+standardised. Missing values in categorical variables are replaced with a dedicated MISSING 
+level, and the variables are one-hot encoded with the first level dropped. Sentinel values are 
+handled before imputation: 365,243 in DAYS_EMPLOYED becomes missing plus a binary 
+flag, the gender code XNA becomes missing, and OWN_CAR_AGE is set to missing for 
+applicants without a car. 
+In total, 301 features are built in four blocks (Table 3). Time variables are converted from days 
+to years, and ratio features relate the loan to the applicant's means. The three external scores are 
+summarised by their mean, minimum, maximum, standard deviation, product and count. Rather 
+than imputing the external scores aggressively, the pipeline records how many are present 
+(EXT_SOURCE_COUNT), since having an external score is itself informative and filling the 
+gap with a mean or median would erase that signal. Auxiliary tables are aggregated with a 
+groupby on SK_ID_CURR, and applicants with no bureau record are flagged 
+(HAS_BUREAU). 
+Table 3. Blocks of engineered features. 
+Block Source tables Representative features 
+Application 
+cleaning and ratios application_train 
+AGE_YEARS, 
+EMPLOYED_YEARS, 
+CREDIT_INCOME_RATIO, 
+ANNUITY_INCOME_RATIO, 
+CREDIT_TERM, 
+EXT_SOURCE_MEAN 
+
+
+===== PAGE 9 =====
+
+9 
+Block Source tables Representative features 
+Bureau aggregates bureau 
+BUR_ACTIVE_CNT, 
+BUR_DEBT_SUM, 
+BUR_MAX_OVERDUE_DAYS, 
+BUR_DEBT_RATIO, 
+HAS_BUREAU 
+Earlier applications 
+and instalments 
+previous_application, 
+installments_payment
+s 
+PREV_APPROVE_RATE, 
+PREV_CNT_PAYMENT_MEAN, 
+INST_PAY_RATIO, 
+INST_LATE_MEAN 
+Point-of-sale and 
+credit card 
+POS_CASH_balance, 
+credit_card_balance 
+POS_UTIL_MEAN, POS_CNT, 
+CC_UTIL_MEAN 
+ 
+3.4. Candidate Models 
+Four classifiers are compared (Table 4). Plain logistic regression and a class-balanced 
+variant that gives more weight to the minority class serve as baselines. The third model 
+is LightGBM tuned with Optuna (Akiba et al., 2019) over 15 trials, with early stopping 
+on the validation fold. The fourth is the same LightGBM model with an isotonic 
+calibration layer fitted on the validation fold. The hyperparameters of the best trial are 
+listed in Table 5. 
+Table 4. Models compared in this study. 
+Model Type Notes 
+Logistic Baseline Unweighted; regularisation constant “C = 
+0,5” 
+Logistic_balanced Baseline class_weight = 'balanced' 
+LightGBM Boosted trees Optuna, 15 trials; early stopping on the 
+validation fold 
+LightGBM_calibrated Boosted trees + 
+calibration 
+Isotonic regression fitted on the validation 
+fold 
+ 
+Table 5. Best LightGBM hyperparameters found by Optuna. 
+n_estimators num_leaves learning_rate objective random_state 
+205 53 0.0469 binary 42 
+
+===== PAGE 10 =====
+
+10 
+ 
+3.5. Calibration and Threshold Selection 
+Calibration matters whenever downstream decisions depend on absolute PD values. An 
+isotonic regression is fitted on the validation fold to map the raw LightGBM output to a 
+calibrated probability. The threshold is then chosen on the same fold using the rule in 
+Equation (7), which gives τ = 0.05. On the test fold this threshold recovers 86.2% of 
+defaulters. Because the validation fold is used for early stopping, calibration and 
+threshold choice alike, any optimism in those three steps would show up as a drop 
+between validation and test; the test fold is the only fair reference. 
+3.6. Scorecard Construction 
+Calibrated probabilities are mapped to points using Equation (4), with a base score of 
+600, a PDO of 20 and base odds of 50:1, following the standard scorecard convention 
+(Siddiqi, 2006). Applicants are then assigned to five rating bands, A to E, from lowest 
+to highest risk. The bands are evaluated not by how they look but by whether the 
+observed default rate rises steadily from A to E on the test fold. 
+ 
+CHAPTER 4: RESULTS AND DISCUSSION 
+4.1. Overall Model Performance 
+Table 6 presents the test-fold metrics. Both LightGBM models outperform the logistic 
+baselines on AUC and KS. Raw LightGBM improves AUC by 0.0142 and KS by 0.0169 
+over plain logistic regression—a consistent but modest gain, since much of the signal 
+lies in a few strong engineered variables (external scores, loan-term ratios) that a linear 
+model can already exploit. 
+Table 6. Test-set metrics for the four candidate models. 
+Model AUC Gini KS Brier PR-
+AUC F1 Recall Precis
+ion 
+Logistic 0.74
+52 
+0.490
+4 
+0.36
+89 
+0.068
+4 0.2350 0.22
+48 0.7927 0.1310 
+Logistic_balanced 0.74
+12 
+0.482
+3 
+0.36
+26 
+0.194
+0 0.2288 0.15
+35 1.0000 0.0831 
+LightGBM 0.75
+94 
+0.518
+8 
+0.38
+58 
+0.067
+7 0.2365 0.22
+94 0.8375 0.1329 
+
+===== PAGE 11 =====
+
+11 
+Model AUC Gini KS Brier PR-
+AUC F1 Recall Precis
+ion 
+LightGBM_calibrat
+ed 
+0.75
+82 
+0.516
+4 
+0.37
+51 
+0.067
+8 0.2282 0.22
+32 0.8624 0.1282 
+ 
+The class-balanced logistic regression deserves a comment. Its recall of 1.0000 together 
+with a precision of 0.0831, almost identical to the 8.0% base rate, shows that at its 
+operating threshold it flags virtually every applicant, which is useless as a decision rule. 
+Its Brier score of 0.1940 is also about three times larger than the others, because re-
+weighting the classes pushes the predicted probabilities far above the true default 
+frequency. The case illustrates why class weights are a poor remedy when calibrated 
+probabilities are needed. 
+Calibration changed the picture slightly. The calibrated LightGBM gives up 0.0012 of 
+AUC and about 0.011 of KS relative to the raw model, and its Brier score is marginally 
+worse (0.0678 against 0.0677), so on this test fold the calibration step did not measurably 
+improve the probability error. It did, however, move the operating point to a higher recall 
+(86.2% against 83.8%) and, as Section 4.2 shows, bring predicted probabilities closer to 
+observed frequencies over most of the score range. The calibrated model is retained for 
+production because the scorecard in Section 4.4 requires probabilities rather than bare 
+scores, and because the loss in ranking quality is small. 
+4.2. Evaluation Curves 
+Figures 8 to 11 show the ROC curves, the precision–recall curves, the KS plot and the 
+reliability diagram. The ROC curves lie well above the diagonal. The precision–recall 
+curves show that, at low and moderate recall, precision is several times the base rate of 
+0.08, although it falls steadily as recall rises, which is the usual price of pushing a model 
+towards catching nearly every defaulter. The KS statistic of the calibrated model peaks 
+at 0.375, comfortably above the informal 0.30 benchmark mentioned in Section 2.6. The 
+reliability diagram indicates that calibrated probabilities track observed default 
+frequencies closely across most of the range, with mild over-confidence between 0.1 
+and 0.3, an artefact that isotonic regression sometimes produces when the calibration set 
+is small. 
+
+===== PAGE 12 =====
+
+12 
+ 
+Figure 8. ROC curves for the four candidate models (test set). 
+ 
+Figure 9. Precision–Recall curves for the two LightGBM models (test set). 
+ 
+Figure 10. Reliability (calibration) plot for the selected model (test set). 
+4.3. Feature Importance 
+Engineered ratios and behavioural summaries lead the LightGBM gain ranking (Figure 
+6): PREV_CNT_PAYMENT_MEAN, CREDIT_TERM, EXT_SOURCE_MEAN and 
+several instalment and point-of-sale features, while age and gender rank much lower. 
+
+
+===== PAGE 13 =====
+
+13 
+The model therefore relies mainly on behavioural rather than demographic information. 
+Gain importance is only a global summary; individual explanations would require 
+methods such as SHAP (Lundberg &amp; Lee, 2017). 
+ 
+Figure 11. Top-25 features by LightGBM gain. 
+4.4. Scorecard and Risk Bands 
+Using the scorecard in Section 3.6, applicants are placed into five bands. Table 7 shows 
+the observed default rate climbing steadily from 1.92% in band A to 30.04% in band E, 
+with predicted and observed rates matching within roughly 1.5 percentage points in each 
+band. 
+Table 7. Risk-band distribution and observed default rate (test set). 
+Rating Score range Average PD Default rate Applicants 
+A 760 – 1000 1.79% 1.92% 2,185 
+B 640 – 760 4.67% 5.02% 2,372 
+C 480 – 640 8.47% 8.70% 1,241 
+D 360 – 480 14.89% 14.84% 1,166 
+E 0 – 360 31.59% 30.04% 536 
+ 
+4.5. Business Impact with prediction 
+At τ = 0.05, the model flags 4,057 of 7,500 test applicants (54%) for review. Of these, 
+520 are true defaulters, so the model catches 86.2% of the 603 defaulters in the test fold 
+at 12.8% precision—roughly 1.6 times the base rate. The remaining 3,537 flagged 
+
+
+===== PAGE 14 =====
+
+14 
+applicants are false alarms, a false-positive rate of about 51% among good borrowers. 
+That is the price of the high recall target: instead of rejecting these applicants, the model 
+routes them to manual review or risk-based pricing rather than automatic approval. 
+Table 8 shows the distribution of defaulters across the bands. The two riskiest bands, D 
+and E, hold just 22.7% of applicants but 55.4% of all defaulters. Including band C 
+captures 73.3% of defaulters while covering 39.2% of applicants. Band A, by contrast, 
+holds nearly 30% of applicants but only 7.0% of defaulters, with a lift of 0.24—a natural 
+candidate for streamlined approval 
+Table 8. Capture rate and lift over the base rate by risk band (test set). 
+Band Applicants Defaulters Capture rate Lift over base 
+A 2,185 42 7.0% 0.24× 
+B 2,372 119 19.7% 0.62× 
+C 1,241 108 17.9% 1.08× 
+D 1,166 173 28.7% 1.85× 
+E 536 161 26.7% 3.74× 
+ 
+4.4 Conclusion 
+The pipeline works end to end, from seven raw tables to a calibrated PD model, a points-
+based scorecard and five risk bands. LightGBM outperformed the logistic baseline, but 
+by a modest margin (AUC 0.758 against 0.745) that is comparable to sampling 
+uncertainty at this sample size. Isotonic calibration made the probabilities usable for the 
+scorecard and raised recall to 86.2% at τ = 0.05, at the cost of a slight loss in 
+discrimination and no gain in Brier score. The bands separate risk monotonically, from 
+a 1.92% default rate in band A to 30.04% in band E. The main limitation is the 
+subsample: training on the full 307,511 rows, bootstrapping the test metrics and adding 
+local explanations such as SHAP are the natural next steps. 
+ 
+ 
+ 
+APPENDICES 
+Appendix A -Data dictionary (excerpt) 
+Field Description 
+
+===== PAGE 15 =====
+
+15 
+TARGET 1 = default, 0 = repaid on time. Binary. 
+EXT_SOURCE_1 / 2 / 3 Normalised external credit scores (mean ≈ 0.5). 
+AMT_CREDIT / AMT_INCOME 
+/ AMT_ANNUITY Loan amount, annual income, annuity. 
+DAYS_BIRTH / 
+DAYS_EMPLOYED 
+Age and employment in days (negative). 365 243 is the 
+missing sentinel. 
+CODE_GENDER, 
+NAME_CONTRACT_TYPE Categorical applicant attributes. 
+CREDIT_TERM, 
+CREDIT_GOODS_RATIO Engineered credit/income/goods ratios. 
+EXT_SOURCE_MEAN / MAX / 
+MIN Aggregated external-score statistics. 
+PREV_CNT_PAYMENT_MEAN, 
+INST_LATE_* 
+Behavioural history from previous applications and 
+instalments. 
+POS_UTIL_MEAN, 
+CC_UTIL_MEAN Utilisation of revolving credit lines. 
+BUR_DEBT_RATIO, 
+BUR_CREDIT_SUM Bureau debt-to-credit aggregates. 
+Appendix B -Cleaning log 
+• DAYS_EMPLOYED sentinel 365 243 → NaN before imputation. 
+• Drop columns with > 60 % missing (certain housing flags; OWN_CAR_AGE when 
+the applicant owns no car). 
+• Categorical NaN → MISSING bucket, then one-hot encoded (first level dropped). 
+• Numeric NaN → median per column (training fold only), then standard-scaled. 
+• Outliers in DAYS_BIRTH and DAYS_EMPLOYED are retained; the tree-based 
+model is insensitive to monotone transforms. 
+• Aggregate features computed with pandas groupby on SK_ID_CURR; no per-row 
+outlier removal. 
+Appendix C -Assumptions register 
+• A1. The TARGET column is observed at the loan horizon; right-censoring is 
+negligible for this portfolio. 
+• A2. Applicants in the test fold are exchangeable with future applicants in the next 
+quarter (no regime change). 
+• A3. External credit scores (EXT_SOURCE_*) are point-in-time and free of leakage. 
+• A4. Behavioural-history aggregates are computable for new applicants at decision 
+time (no look-ahead bias). 
+
+===== PAGE 16 =====
+
+16 
+• A5. The cost of a missed defaulter is at least ten times the cost of a false alarm; this 
+drives the recall floor of 0.80. 
+Appendix D -Link to code 
+The pipeline is a single Jupyter  that produces model/model.joblib, predictions_test.csv, 
+metrics.json, model_card.json and all PNG exhibits. Re-running the notebook 
+regenerates every figure and numerical table in this report.  
+ The project repository is: https://github.com/tphathuin1802/home-credit-ml-
+pipeline 
+ Notebook link: 
+https://colab.research.google.com/drive/1_dNlM3UGmLSFDdZTSSPJFeNzF-
+cA5BBD?usp=sharing 
+ Deployment link: https://sh-home-credit-ml-pipeline.streamlit.app/ 
+ 
+Appendix E -AI-use disclosure 
+AI assistance was used in three limited ways: (i) drafting the first version of the report 
+prose from a hand-written outline; (ii) formatting the final .docx and tables; (iii) 
+reformatting LaTeX-style equations to plain English. All numerical results, model 
+selections, thresholds, sensitivity checks and policy recommendations were produced 
+by the human authors from the pipeline outputs; the AI did not invent, modify or 
+reinterpret any of the numbers reported above. 
+ 
+
+===== PAGE 17 =====
+
+17 
+REFERENCES 
+Akiba, T., Sano, S., Yanase, T., Ohta, T., & Koyama, M. (2019). Optuna: A next-
+generation hyperparameter optimization framework. Proceedings of the 25th 
+ACM SIGKDD International Conference on Knowledge Discovery & Data 
+Mining, 2623–2631. 
+Baesens, B., Van Gestel, T., Viaene, S., Stepanova, M., Suykens, J., & Vanthienen, J. 
+(2003). Benchmarking state-of-the-art classification algorithms for credit 
+scoring. Journal of the Operational Research Society, 54(6), 627–635. 
+Basel Committee on Banking Supervision. (2006). International convergence of capital 
+measurement and capital standards: A revised framework (comprehensive 
+version). Bank for International Settlements. 
+Friedman, J. H. (2001). Greedy function approximation: A gradient boosting machine. 
+The Annals of Statistics, 29(5), 1189–1232. 
+Hand, D. J., & Henley, W. E. (1997). Statistical classification methods in consumer 
+credit scoring: A review. Journal of the Royal Statistical Society: Series A, 
+160(3), 523–541. 
+Kaggle. (2018). Home Credit Default Risk [Data set and competition]. 
+https://www.kaggle.com/c/home-credit-default-risk 
+Ke, G., Meng, Q., Finley, T., Wang, T., Chen, W., Ma, W., Ye, Q., & Liu, T.-Y. (2017). 
+LightGBM: A highly efficient gradient boosting decision tree. Advances in 
+Neural Information Processing Systems, 30, 3146–3154. 
+Lessmann, S., Baesens, B., Seow, H.-V., & Thomas, L. C. (2015). Benchmarking state-
+of-the-art classification algorithms for credit scoring: An update of research. 
+European Journal of Operational Research, 247(1), 124–136. 
+Lundberg, S. M., & Lee, S.-I. (2017). A unified approach to interpreting model 
+predictions. Advances in Neural Information Processing Systems, 30, 4765–
+4774. 
+Niculescu-Mizil, A., & Caruana, R. (2005). Predicting good probabilities with 
+supervised learning. Proceedings of the 22nd International Conference on 
+Machine Learning, 625–632. 
+Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., … 
+Duchesnay, É. (2011). Scikit-learn: Machine learning in Python. Journal of 
+Machine Learning Research, 12, 2825–2830. 
+. 

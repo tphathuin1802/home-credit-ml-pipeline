@@ -1,0 +1,427 @@
+
+====== SLIDE 1 ======
+HOME CREDITDEFAULTRISK
+SCORING.
+A reproducible end-to-end ML pipeline that turns 7 raw tables into a deployable
+Probability-of- Default model ΓÇö with scorecard, risk bands & a Streamlit front-end.
+Phat Huynh, Duy Nguyen Applied Math + Finance Credit Risk Modeling Python ┬╖ LightGBM ┬╖ Streamlit
+HC // CREDIT-RISK
+01 / 14
+MIDTERM PROJECT 2026 CREDIT RISK MODELING
+AUTHOR DOMAIN COURSE STACK
+0 1  /  1 5
+
+====== SLIDE 2 ======
+?
+ 
+03
+Calibrated PD
+Calibrated PD feeds
+downstream credit policy,
+expected loss, and loan
+pricing.
+ 
+ 
+02 / 15
+SECTION 01
+THEPROBLEM.
+ 
+Why it matters
+Default rate is low (~8%) ΓÇö
+imbalanced classification; naive
+accuracy is misleading.
+Cost asymmetry
+Home Credit serves underbanked borrowers with thin credit files. 
+The business problem: score each applicant for
+default risk using alternative data ΓÇö bureau, prior applications, installments, POS, credit cards.
+01 02
+Missing a defaulter is far more
+expensive than
+rejecting a good payer.
+HC // CREDIT-RISK
+
+====== SLIDE 3 ======
+2 0 2 6 - 1 0 - 1 8
+ 
+HC // CREDIT-RISK 03 / 15
+ 
+o m e
+C r e d i t  s e r v e s  u n d e r b a n k e d  b o r r o w e r s
+w i t h  t h i n
+c r e d i t  f i l e s .  T h e  b u s i n e s s  p r o b l e m :  s c o r e  e a c h  a p p l i c a n t  f o r  d e f a u l t  r i s k  u s i n g
+a l t e r n a t i v e  d a t a  ( b u r e a u ,  p r i o r  a p p l i c a t i o n s ,  i n s t a l l m e n t s ,  P O S ,  c r e d i t  c a r d s ) .
+W h y  t h i s  m a t t e r s :
+Default rate is low (~8%) ΓÇö imbalanced classification; naive
+accuracy is misleading.
+Cost asymmetry ΓÇö missing a defaulter is far more expensive than
+rejecting a good payer.
+Calibrated PD feeds downstream credit policy, expected loss, and
+loan pricing.
+Explainability required by credit regulators ΓÇö feature importance &
+scorecard.
+ 
+ 
+ 
+ 
+D E L I V E R A B L E S
+ΓÇó  T r a i n e d  &  c a l i b r a t e d  m o d e l  ( m o d e l . j o b l i b )
+ΓÇó  M e t r i c s  t a b l e  ( m o d e l / m e t r i c s _ t a b l e . c s v )
+ΓÇó  P e r - c u s t o m e r  P D  +  r a t i n g
+( m o d e l / p r e d i c t i o n s _ t e s t . c s v )
+ΓÇó  S t r e a m l i t  w e b a p p ( S t r e a m l i t ) + D o c k e r
+ΓÇó  M o d e l  c a r d  ( m o d e l / m o d e l _ c a r d . j s o n )
+ΓÇó  T h i s  s l i d e  d e c k  ( s l i d e s . p d f )
+0 1  / /  P r o b l e m  &  M o t i v a t i o n
+
+====== SLIDE 4 ======
+2026-10-1802 ┬╖ DATASET
+HOME CREDIT DEFAULT RISK ΓÇö KAGGLE
+HC // CREDIT-RISK 04 / 15
+T a b l e
+a p p l i c a t i o n _ t r a i n
+b u r e a u
+b u r e a u _ b a l a n c e
+p r e v i o u s _ a p p l i c a t i o n
+i n s t a l l m e n t s _ p a y m e n t s
+P O S _ C A S H _ b a l a n c e
+c r e d i t _ c a r d _ b a l a n c e
+R o w s
+3 0 7 , 5 1 1
+1 , 7 1 6 , 4 2 8
+2 7 , 2 9 9 , 9 2 5
+1 , 6 7 0 , 2 1 4
+1 3 , 6 0 5 , 4 0 1
+1 0 , 0 0 1 , 3 5 8
+3 , 8 4 0 , 3 1 2
+U s e
+m a s t e r  t a b l e  w i t h  T A R G E T
+c r e d i t s  r e p o r t e d  t o  o t h e r  b u r e a u s
+m o n t h l y  s t a t u s  o f  b u r e a u  c r e d i t s
+p r i o r  H o m e  C r e d i t  a p p l i c a t i o n s
+i n s t a l l m e n t  r e p a y m e n t  h i s t o r y
+m o n t h l y  P O S  /  c a s h  l o a n  s n a p s h o t s
+m o n t h l y  c r e d i t - c a r d  s n a p s h o t s
+
+====== SLIDE 5 ======
+2026-10-1803 ┬╖ DATASET
+Exploratory Data Analysis // Target & Missing
+HC // CREDIT-RISK 05 / 15
+Class imbalance and data quality drive downstream modeling choices. Top 20 columns by missing-rate
+and distribution by age group are the most informative signals.
+Findings ΓÇö Default rate Γëê 8%, stable across age; the 20-25 cohort is the riskiest. ~50+ columns have meaningful
+missingness, dominated by housing & external scores. These shape the imputation and feature-engineering strategies.
+
+====== SLIDE 6 ======
+2026-10-18
+06 / 15
+04 // EDA // Key Features by Target
+ Comparingdistributions of AMT_CREDIT, AMT_INCOME, AGE and the three EXT_SOURCE external scores between defaulters and non-defaulters.
+EXT_SOURCE_1/2/3 carry the strongest discriminative power ΓÇö a known Home Credit signal.
+E X T _ S O U R C E _ 1
+S T R O N G
+E X T _ S O U R C E _ 2
+S T R O N G
+E X T _ S O U R C E _ 3
+S T R O N G
+
+====== SLIDE 7 ======
+2026-10-18
+07 / 15
+0 5  / /  F e a t u r e  E n g i n e e r i n g  P i p e l i n e
+ 
+0 3  /  P r e v i o u s  a p p l i c a t i o n s  +  i n s t a l l m e n t s
+S t a r t i n g  f r o m  1 2 2  r a w  c o l u m n s ,
+w e
+e n g i n e e r
+3 0 1
+f e a t u r e s
+a c r o s s  4  f u n c t i o n a l  b l o c k s .
+0 1  /  A p p l i c a t i o n  c l e a n i n g
+0 2  /  B u r e a u  a g g r e g a t i o n
+0 4  /  P O S _ C A S H  +  C r e d i t  c a r d
+ΓÇó  P R E V _ A M T _ S U M / M E A N ,  P R E V _ C R E D I T _ M A X ,
+P R E V _ D A Y S _ D E C _ M I N  ΓÇó  P R E V _ C N T _ P A Y M E N T _ M E A N
+ΓÇó  P R E V _ A P P R O V E _ R A T E
+ΓÇó  I N S T _ P A Y _ R A T I O ,  I N S T _ L A T E _ M E A N
+ΓÇó  I N S T _ L A T E _ 7 D _ S U M
+ΓÇó  D A Y S _ E M P L O Y E D  s e n t i n e l  ( 3 6 5 2 4 3 )  ΓåÆ  N a N  +  f l a g
+ΓÇó  C O D E _ G E N D E R  X N A  ΓåÆ  N a N
+ΓÇó  O W N _ C A R _ A G E  =  N a N  i f  n o  c a r
+ΓÇó  T i m e  f e a t u r e s :  A G E _ Y E A R S ,  E M P L O Y E D _ Y E A R S ,  R E G I S T E R E D _ Y E A R S
+ΓÇó  R a t i o  f e a t u r e s :  C R E D I T _ I N C O M E ,  A N N U I T Y _ I N C O M E ,  C R E D I T _ T E R M ,
+C R E D I T _ G O O D S ,  I N C O M E _ P E R _ F A M
+ΓÇó  E X T _ S O U R C E  a g g r e g a t e s :  M E A N  /  M I N  /  M A X  /  S T D  /  P R O D  /  C O U N T
+ΓÇó  N U M _ D O C S _ S U B M I T T E D
+ΓÇó  P O S _ U T I L _ M E A N ,  P O S _ C N T
+ΓÇó  C C _ U T I L _ M E A N
+ΓÇó  A g g r e g a t i o n s  p e r  c u s t o m e r ,  m e r g e d  t o
+m a s t e r  ΓÇó  F i n a l  3 0 1 - d i m  f e a t u r e  v e c t o r  p e r
+c u s t o m e r
+G r o u p  b y  S K _ I D _ C U R R :
+ΓÇó  B U R _ A C T I V E _ C N T ,  B U R _ O V E R D U E _ C N T
+ΓÇó  B U R _ C R E D I T _ S U M ,  B U R _ D E B T _ S U M ,
+B U R _ O V E R D U E _ A M T  ΓÇó  B U R _ D E B T _ R A T I O  =  d e b t  /
+c r e d i t
+ΓÇó  B U R _ L O A N _ C N T ,  B U R _ D A Y S _ C R E D I T _ M I N
+ΓÇó  B U R _ T Y P E _ *  o n e - h o t  ( p e r  c r e d i t  t y p e )
+ΓÇó  H A S _ B U R E A U  f l a g
+
+====== SLIDE 8 ======
+2026-10-18
+HC // CREDIT-RISK 08 / 15
+06 // Methodology // Modeling Pipeline
+ 
+W e c o m p a r e  4  m o d e l s :  2  l o g i s t i c - r e g r e s s i o n  b a s e l i n e s
+( u n w e i g h t e d  /  c l a s s - b a l a n c e d ) a n d  2  g r a d i e n t - b o o s t i n g  t r e e s  ( r a w  +
+i s o t o n i c - c a l i b r a t e d ) .  O p t u n a  ( 1 5  t r i a l s )  t u n e s  L i g h t G B M  h y p e r p a r a m e t e r s ;  e a r l y  s t o p p i n g  o n  t h e  v a l i d a t i o n  f o l d .
+S T E P  
+1 .  S p l i t
+2 .  P r e p r o c e s s C o l u m n T r a n s f o r m e r
+3 .  B a s e l i n e
+4 .  T u n e d  m o d e L l i g h t G B M  ( O p t u n a  1 5  t r i a l s )
+5 .  C a l i b r a t i o I n s o t o n i c  r e g r e s s i o n  o n  v a l i d a t i o n
+6 .  T h r e s h o l d F 1 - d r i v e n  ( r e c a l l  ΓëÑ  8 0 % )
+L o g i s t i c  R e g r e s s i o n
+7 . E v a l u a t e  A U C ,  G i n i ,  K S ,  B r i e r ,  P R - A U C ,  F 1
+D E T A I L
+s t r a t i f i e d  o n  T A R G E T ,  f i x e d  s e e d
+m e d i a n  i m p u t e  ( n u m )  +  m o s t - f r e q  ( c a t )  
++  o n e - h o t  ( c a t ,  d r o p - f i r s t )  +  s t a n d a r d i z e  ( n u m )
+L R  +  L R - b a l a n c e d  ( c l a s s _ w e i g h t = ' b a l a n c e d ' )
+n _ e s t i m a t o r s = 2 0 5 ,  n u m _ l e a v e s = 5 3 ,  l r = 0 . 0 4 7
+B r i e r  p r e = 0 . 0 6 7 7  ΓåÆ  p o s t = 0 . 0 6 7 8
+╧ä *  =  0 . 0 5
+t e s t  s e t ,  7 , 5 0 0  u n s e e n  c u s t o m e r s
+
+====== SLIDE 9 ======
+2026-10-18
+HC // CREDIT-RISK 9 / 15
+07 // Results // Test-Set Comparison (n = 7,500)
+ All four models evaluated on the same held-out test fold. LightGBM raw has the best AUC; the calibrated variant is selected for
+deployment because its probabilities are trustworthy for downstream scorecarding.
+M o d e l
+L o g i s t i c
+L o g i s t i c _ b a l a n c e d
+L i g h t G B M
+L i g h t G B M _ c a l i b r a t e d
+A U C
+0 . 7 4 5 2
+0 . 7 4 1 2
+0 . 7 5 9 4
+0 . 7 5 8 2
+G i n i
+0 . 4 9 0 4
+0 . 4 8 2 3
+0 . 5 1 8 8
+0 . 5 1 6 4
+K S
+0 . 3 6 8 9
+0 . 3 6 2 6
+0 . 3 8 5 8
+0 . 3 7 5 1
+B r i e r
+0 . 0 6 8 4
+0 . 1 9 4 0
+0 . 0 6 7 7
+0 . 0 6 7 8
+P R - A U C
+0 . 2 3 5 0
+0 . 2 2 8 8
+0 . 2 3 6 5
+0 . 2 2 8 2
+F 1
+0 . 2 2 4 8
+0 . 1 5 3 5
+0 . 2 2 9 4
+0 . 2 2 3 2
+Selected model: LightGBM + Isotonic Calibration. Catches 86.2% of defaulters at the cost of flagging ~12.8% precision.
+R e c a l l
+0 . 7 9 2 7
+1 . 0 0 0 0
+0 . 8 3 7 5
+0 . 8 6 2 4
+P r e c i s i o n
+0 . 1 3 1 0
+0 . 0 8 3 1
+0 . 1 3 2 9
+0 . 1 2 8 2
+
+====== SLIDE 10 ======
+2026-10-18
+HC // CREDIT-RISK 10 / 15
+08 // Evaluation Plots // ROC ┬╖ PR ┬╖ KS ┬╖ Calibration
+ 
+KS = 0.375 at the optimal
+cut-off ΓÇö well above the
+0.20 'acceptable' and 0.30
+'good' credit-scoring
+benchmarks.
+
+====== SLIDE 11 ======
+2026-10-18
+HC // CREDIT-RISK 11 / 15
+09 // Top-25 Feature Importance // LightGBM (gain)
+ Topfeatures come from engineered ratios, installment history, and external scores ΓÇö the model relies on behavioural signals, not raw
+demographics.
+#
+1
+2
+3
+4
+5
+6
+7
+8
+9
+1 0
+f e a t u r e
+P R E V _ C N T _ P A Y M E N T _ M E A N
+C R E D I T _ T E R M
+E X T _ S O U R C E _ M E A N
+C R E D I T _ G O O D S _ R A T I O
+I N S T _ P A Y _ R A T I O
+P O S _ U T I L _ M E A N
+E M P L O Y E D _ Y E A R S
+B U R _ D E B T _ R A T I O
+P R E V _ A P P R O V E _ R A T E
+A N N U I T Y _ I N C O M E _ R A T I O
+
+====== SLIDE 12 ======
+2026-10-18
+HC // CREDIT-RISK
+SCORE FORMULA
+score(PD) = 712.88 ΓêÆ 28.8539 ┬╖ ln( PD / (1 ΓêÆ PD) )
+12 / 15
+10 // From PD to Score // Scorecard & Risk Bands
+ 
+We translate PD into a credit score (Siddiqui 2013 convention: base = 600, PDO = 20,odds = 50:1) and bucket into 5 rating bands.
+R a t i n g
+A  ( L o w  r i s k )
+B  ( A c c e p t a b l e )
+C  ( W a t c h - l i s t )
+D  ( S u b - s t a n d a r d )
+E  ( H i g h  r i s k )
+S c o r e  r a n g e
+7 6 0  ΓÇô  1 0 0 0
+6 4 0  ΓÇô  7 6 0
+4 8 0  ΓÇô  6 4 0
+3 6 0  ΓÇô  4 8 0
+0  ΓÇô  3 6 0
+A v g  P D  ( t e s t )
+1 . 7 9 %
+4 . 6 7 %
+8 . 4 7 %
+1 4 . 8 9 %
+3 1 . 5 9 %
+E m p i r i c a l  d e f a u l t  r a t e
+1 . 9 2 %
+5 . 0 2 %
+8 . 7 0 %
+1 4 . 8 4 %
+3 0 . 0 4 %
+Empirical default rate rises monotonically across bands ΓÇö the scorecard is well-calibrated.
+P o p u l a t i o n
+2 , 1 8 5
+2 , 3 7 2
+1 , 2 4 1
+1 , 1 6 6
+5 3 6
+
+====== SLIDE 13 ======
+2026-10-18
+HC // CREDIT-RISK 13 / 15
+11 // Business Impact // What does 86.2% recall buy us?
+ At ╧ä  = 0.05,on 7,500
+base rate:
+test customers (603 defaulters), the model flags 603 ├ù 0.862 Γëê 520 defaulters for manual review.Compare to the 8%
+Rating
+Band A
+Band B
+Band C
+Band D
+Band E
+Population
+2,185
+2,372
+1,241
+1,166
+536
+Defaulters in band
+42
+119
+108
+173
+161
+Capture rate
+7.0%
+19.7%
+17.9%
+28.7%
+26.7%
+Lift over base
+0.24├ù
+0.62├ù
+1.08├ù
+1.85├ù
+3.74├ù
+
+====== SLIDE 14 ======
+2026-10-18
+F U T U R E  W O R K
+HC // CREDIT-RISK 14 / 15
+12 // Conclusion // Limitation // Future works
+ 
+L o g i s t i c
+0 . 7 4 5 2
+0 . 4 9 0 4
+0 . 3 6 8 9
+0 . 0 6 8 4
+7 9 . 3 %
+L i g h t G B M  ( r a w )
+0 . 7 5 9 4
+0 . 5 1 8 8
+0 . 3 8 5 8
+0 . 0 6 7 7
+8 3 . 7 %
+L i g h t G B M  +  C a l i b .
+0 . 7 5 8 2
+0 . 5 1 6 4
+0 . 3 7 5 1
+0 . 0 6 7 8
+8 6 . 2 %Webuilt an end-to-end credit risk pipeline that turns 7 raw tables into a deployable PD model with a scorecard, risk bands, and a
+Streamlit front-end. 
+The LightGBM-calibrated model achieves AUC = 0.758, KS = 0.375 and catches 86.2% of defaulters at ╧ä  = 0.05 ΓÇö strong performance for a
+default-prediction problem with 8% positive rate and noisy alternative-data signals.
+A U C
+G i n i
+K S
+B r i e r
+R e c a l l @ ╧ä = 0 . 0 5
+L I M I T A T I O N S
+R e j e c t e d - i n f e r e n c e  ΓÇö  c u r r e n t  t r a i n i n g  d a t a  o n l y  i n c l u d e s
+a p p r o v e d  l o a n s ;  e x t e n d i n g  t o  t h e  i n f e r e n c e  p o p u l a t i o n  w o u l d
+c l o s e  t h e  s e l e c t i o n - b i a s  g a p .
+D e e p  t a b u l a r  m o d e l s  ΓÇö  T a b N e t ,  F T - T r a n s f o r m e r ,  a n d  o t h e r
+d e e p - l e a r n i n g  t a b u l a r  a r c h i t e c t u r e s  a r e  n e x t  s t e p s .
+T i m e - s e r i e s  o f  i n s t a l l m e n t  h i s t o r y  ΓÇö  s e q u e n c e  m o d e l s  ( L S T M ,
+T r a n s f o r m e r )  o n  p a y m e n t  d e l t a s  c a n  e x t r a c t  a d d i t i o n a l
+s i g n a l .
+C a l i b r a t i o n  r e f r e s h  ΓÇö  q u a r t e r l y  r e - f i t  o f  i s o t o n i c
+r e g r e s s i o n  a s  p o r t f o l i o  m i x  s h i f t s .
+F U T U R E  W O R K
+S a m p l e  s i z e  ΓÇö  n o t e b o o k  e x e c u t e d  o n  a  1 2 k - r o w  s u b s a m p l e  t o  f i t
+l o c a l  c o m p u t e .  R e -  r u n n i n g  o n  t h e  f u l l  3 0 7 k  r o w s  i s  e x p e c t e d
+t o  l i f t  A U C  f u r t h e r .
+M a c r o  r e c a l l  v s  p r e c i s i o n  ΓÇö  a t  t a u = 0 . 0 5  w e  p r i o r i t i s e  c a t c h i n g
+d e f a u l t e r s ;  a  h i g h e r  t a u  w o u l d  i m p r o v e  p r e c i s i o n  a t  t h e  c o s t
+o f  r e c a l l .  P o l i c y  c h o i c e ,  n o t  a  m o d e l  f l a w .
+D r i f t  m o n i t o r i n g  ΓÇö  H o m e  C r e d i t  p o r t f o l i o  e v o l v e s  y e a r l y ;  P S I  /
+K S  d r i f t  o n  E X T _ S O U R C E _ * ,  A M T _ *  s h o u l d  b e  t r a c k e d  q u a r t e r l y .
+F a i r n e s s  a u d i t  ΓÇö  d i s a g g r e g a t e d  m e t r i c s  ( C O D E _ G E N D E R ,  A G E _ B A N D )
+r e q u i r e d  b e f o r e  p r o d u c t i o n  r o l l o u t .
+
+====== SLIDE 15 ======
+THANK YOU.
+Q u e s t i o n s ,  f e e d b a c k ,  c o l l a b o r a t i o n  ΓÇö  a l w a y s  w e l c o m e .
+h t t p s : / / s h - h o m e - c r e d i t - m l - p i p e l i n e . s t r e a m l i t . a p p
+HC // CREDIT-RISK ┬╖ MIDTERM PROJECT 2026
