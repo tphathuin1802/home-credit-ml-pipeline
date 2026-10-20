@@ -297,7 +297,7 @@ Open `powerbi/homecredit.pbix` in Power BI Desktop, point to `powerbi/data/` and
 
 If you use this work in academic or industrial research, please cite:
 
-> Huynh, P., Nguyen, D. (2026). _Home Credit Default Risk — End-to-End Probability-of-Default Pipeline with LightGBM and Isotonic Calibration._ Midterm project, Applied Mathematics in Economics & Finance, Ho Chi Minh University of Technology.
+> Huynh, P., Nguyen, D. (2026). _Home Credit Default Risk — End-to-End Probability-of-Default Pipeline with LightGBM and Isotonic Calibration._ Midterm project, Applied Mathematics in Economics & Finance, Vietnam National University.
 
 **License.** MIT — free to use, modify and deploy, subject to retaining this notice.
 
